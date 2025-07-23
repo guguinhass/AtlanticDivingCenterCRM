@@ -264,7 +264,7 @@ def exportar_emails():
             'Nome': cliente["nome"],
             'Email': cliente["email"],
             'Nº Mergulhos': cliente["num_mergulho"],
-            'Data Mergulho': datetime.strptime(cliente["data_mergulho"], "%Y-%m-%d").strftime('%d/%m/%Y'),
+            'Data Mergulho': datetime.strptime(cliente["data_mergulho"], "%Y-%m-%d").strftime('%Y/%m/%d'),
             'Valor da fatura(€)': cliente["valor_fatura"],
             'Nacionalidade': cliente["nacionalidade"].capitalize(),
             '1º Email Enviado': 'Sim' if cliente["primeiro_email_enviado"] else 'Não',
