@@ -1,0 +1,27 @@
+{% for cliente in clientes %}
+<tr>
+    <td>{{ cliente.nome }}</td>
+    <td>{{ cliente.email }}</td>
+    <td>{{ cliente.num_mergulho }}</td>
+       <td>{{ cliente.formatted_date }}</td>
+    <td>{{ "%.2f"|format(cliente.valor_fatura) }} €</td>
+    <td>{{ cliente.nacionalidade.capitalize() }}</td>
+    <td class="{{ 'text-success' if cliente.primeiro_email_enviado else 'text-danger' }}">
+        {{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}
+    </td>
+    <td class="{{ 'text-success' if cliente.segundo_email_enviado else 'text-danger' }}">
+        {{ 'Sim' if cliente.segundo_email_enviado else 'Não' }}
+    </td>
+    <td class="{{ 'text-success' if cliente.email_manual_enviado else 'text-danger' }}">
+        {{ 'Sim' if cliente.email_manual_enviado else 'Não' }}
+    </td>
+    <td class="d-flex gap-2">
+        <form action="{{ url_for('enviar_manual', email=cliente.email) }}" method="post" class="form-enviar">
+            <button type="submit" class="btn btn-sm btn-success">Enviar</button>
+        </form>
+        <form action="{{ url_for('remover_cliente', email=cliente.email) }}" method="post" class="form-remover">
+            <button type="submit" class="btn btn-sm btn-danger">Remover</button>
+        </form>
+    </td>
+</tr>
+{% endfor %}
