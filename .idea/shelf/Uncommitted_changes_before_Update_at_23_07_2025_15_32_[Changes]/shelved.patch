@@ -1,0 +1,103 @@
+Index: .idea/workspace.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"AutoImportSettings\">\r\n    <option name=\"autoReloadType\" value=\"SELECTIVE\" />\r\n  </component>\r\n  <component name=\"ChangeListManager\">\r\n    <list default=\"true\" id=\"ecc8d2d0-dffe-4cab-967b-a29a2741a503\" name=\"Changes\" comment=\"\">\r\n      <change afterPath=\"$PROJECT_DIR$/.idea/AtlanticDivingCenterCRM.iml\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/.idea/misc.xml\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/.idea/modules.xml\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/.idea/vcs.xml\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/.idea/workspace.xml\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/app.py\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/requirements.txt\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/templates/email_feedback.html\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/templates/email_feedback_internacional_alemao.html\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/templates/email_feedback_internacional_frances.html\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/templates/email_feedback_internacional_ingles.html\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/templates/formulario_clientes.html\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/templates/partials/tabela_clientes.html\" afterDir=\"false\" />\r\n    </list>\r\n    <option name=\"SHOW_DIALOG\" value=\"false\" />\r\n    <option name=\"HIGHLIGHT_CONFLICTS\" value=\"true\" />\r\n    <option name=\"HIGHLIGHT_NON_ACTIVE_CHANGELIST\" value=\"false\" />\r\n    <option name=\"LAST_RESOLUTION\" value=\"IGNORE\" />\r\n  </component>\r\n  <component name=\"FileTemplateManagerImpl\">\r\n    <option name=\"RECENT_TEMPLATES\">\r\n      <list>\r\n        <option value=\"Flask Main\" />\r\n        <option value=\"HTML File\" />\r\n        <option value=\"Python Script\" />\r\n      </list>\r\n    </option>\r\n  </component>\r\n  <component name=\"FlaskConsoleOptions\" custom-start-script=\"import sys; print('Python %s on %s' % (sys.version, sys.platform)); sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo, NoAppException&#10;for module in [&quot;main.py&quot;, &quot;wsgi.py&quot;, &quot;app.py&quot;]:&#10;    try: locals().update(ScriptInfo(app_import_path=module, create_app=None).load_app().make_shell_context()); print(&quot;\\nFlask App: %s&quot; % app.import_name); break&#10;    except NoAppException: pass\">\r\n    <envs>\r\n      <env key=\"FLASK_APP\" value=\"app\" />\r\n    </envs>\r\n    <option name=\"myCustomStartScript\" value=\"import sys; print('Python %s on %s' % (sys.version, sys.platform)); sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo, NoAppException&#10;for module in [&quot;main.py&quot;, &quot;wsgi.py&quot;, &quot;app.py&quot;]:&#10;    try: locals().update(ScriptInfo(app_import_path=module, create_app=None).load_app().make_shell_context()); print(&quot;\\nFlask App: %s&quot; % app.import_name); break&#10;    except NoAppException: pass\" />\r\n    <option name=\"myEnvs\">\r\n      <map>\r\n        <entry key=\"FLASK_APP\" value=\"app\" />\r\n      </map>\r\n    </option>\r\n  </component>\r\n  <component name=\"Git.Settings\">\r\n    <option name=\"RECENT_GIT_ROOT_PATH\" value=\"$PROJECT_DIR$\" />\r\n  </component>\r\n  <component name=\"ProjectColorInfo\">{\r\n  &quot;associatedIndex&quot;: 2\r\n}</component>\r\n  <component name=\"ProjectId\" id=\"2zuogfwoPx2hF6PzPpwGS4WC83G\" />\r\n  <component name=\"ProjectLevelVcsManager\" settingsEditedManually=\"true\" />\r\n  <component name=\"ProjectViewState\">\r\n    <option name=\"hideEmptyMiddlePackages\" value=\"true\" />\r\n    <option name=\"showLibraryContents\" value=\"true\" />\r\n  </component>\r\n  <component name=\"PropertiesComponent\">{\r\n  &quot;keyToString&quot;: {\r\n    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,\r\n    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,\r\n    &quot;Flask server.AtlanticDivingCenterCRM.executor&quot;: &quot;Run&quot;,\r\n    &quot;Flask server.Flask (crm_mergulho_smtp.py).executor&quot;: &quot;Run&quot;,\r\n    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,\r\n    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,\r\n    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,\r\n    &quot;git-widget-placeholder&quot;: &quot;master&quot;,\r\n    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,\r\n    &quot;last_opened_file_path&quot;: &quot;C:/Users/gugar/PycharmProjects/AtlanticDivingCenterCRM&quot;,\r\n    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,\r\n    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,\r\n    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,\r\n    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,\r\n    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,\r\n    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.sourceCode.Python&quot;,\r\n    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;\r\n  }\r\n}</component>\r\n  <component name=\"RecentsManager\">\r\n    <key name=\"MoveFile.RECENT_KEYS\">\r\n      <recent name=\"C:\\Users\\gugar\\PycharmProjects\\AtlanticDivingCenterCRM\\templates\" />\r\n      <recent name=\"C:\\Users\\gugar\\PycharmProjects\\AtlanticDivingCenterCRM\" />\r\n    </key>\r\n  </component>\r\n  <component name=\"RunManager\" selected=\"Flask server.Flask (app.py)\">\r\n    <configuration name=\"AtlanticDivingCenterCRM\" type=\"Python.FlaskServer\">\r\n      <module name=\"AtlanticDivingCenterCRM\" />\r\n      <option name=\"target\" value=\"$PROJECT_DIR$/app.py\" />\r\n      <option name=\"targetType\" value=\"PATH\" />\r\n      <option name=\"ENV_FILES\" value=\"\" />\r\n      <option name=\"INTERPRETER_OPTIONS\" value=\"\" />\r\n      <option name=\"PARENT_ENVS\" value=\"true\" />\r\n      <option name=\"SDK_HOME\" value=\"\" />\r\n      <option name=\"WORKING_DIRECTORY\" value=\"$PROJECT_DIR$\" />\r\n      <option name=\"IS_MODULE_SDK\" value=\"false\" />\r\n      <option name=\"ADD_CONTENT_ROOTS\" value=\"true\" />\r\n      <option name=\"ADD_SOURCE_ROOTS\" value=\"true\" />\r\n      <EXTENSION ID=\"PythonCoverageRunConfigurationExtension\" runner=\"coverage.py\" />\r\n      <option name=\"launchJavascriptDebuger\" value=\"false\" />\r\n      <method v=\"2\" />\r\n    </configuration>\r\n    <configuration name=\"Flask (app.py)\" type=\"Python.FlaskServer\" temporary=\"true\" nameIsGenerated=\"true\">\r\n      <module name=\"AtlanticDivingCenterCRM\" />\r\n      <option name=\"target\" value=\"$PROJECT_DIR$/app.py\" />\r\n      <option name=\"targetType\" value=\"PATH\" />\r\n      <option name=\"ENV_FILES\" value=\"\" />\r\n      <option name=\"INTERPRETER_OPTIONS\" value=\"\" />\r\n      <option name=\"PARENT_ENVS\" value=\"true\" />\r\n      <option name=\"SDK_HOME\" value=\"\" />\r\n      <option name=\"WORKING_DIRECTORY\" value=\"$PROJECT_DIR$\" />\r\n      <option name=\"IS_MODULE_SDK\" value=\"true\" />\r\n      <option name=\"ADD_CONTENT_ROOTS\" value=\"true\" />\r\n      <option name=\"ADD_SOURCE_ROOTS\" value=\"true\" />\r\n      <EXTENSION ID=\"PythonCoverageRunConfigurationExtension\" runner=\"coverage.py\" />\r\n      <option name=\"launchJavascriptDebuger\" value=\"false\" />\r\n      <method v=\"2\" />\r\n    </configuration>\r\n    <recent_temporary>\r\n      <list>\r\n        <item itemvalue=\"Flask server.Flask (app.py)\" />\r\n      </list>\r\n    </recent_temporary>\r\n  </component>\r\n  <component name=\"SharedIndexes\">\r\n    <attachedChunks>\r\n      <set>\r\n        <option value=\"bundled-js-predefined-d6986cc7102b-1632447f56bf-JavaScript-PY-243.25659.43\" />\r\n        <option value=\"bundled-python-sdk-181015f7ab06-4df51de95216-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-243.25659.43\" />\r\n      </set>\r\n    </attachedChunks>\r\n  </component>\r\n  <component name=\"SpellCheckerSettings\" RuntimeDictionaries=\"0\" Folders=\"0\" CustomDictionaries=\"0\" DefaultDictionary=\"application-level\" UseSingleDictionary=\"true\" transferred=\"true\" />\r\n  <component name=\"TaskManager\">\r\n    <task active=\"true\" id=\"Default\" summary=\"Default task\">\r\n      <changelist id=\"ecc8d2d0-dffe-4cab-967b-a29a2741a503\" name=\"Changes\" comment=\"\" />\r\n      <created>1752590431886</created>\r\n      <option name=\"number\" value=\"Default\" />\r\n      <option name=\"presentableId\" value=\"Default\" />\r\n      <updated>1752590431886</updated>\r\n      <workItem from=\"1752590432946\" duration=\"1208000\" />\r\n      <workItem from=\"1752653102848\" duration=\"12354000\" />\r\n      <workItem from=\"1752668409250\" duration=\"133000\" />\r\n      <workItem from=\"1752670702525\" duration=\"1686000\" />\r\n      <workItem from=\"1752739690471\" duration=\"20227000\" />\r\n      <workItem from=\"1752826305750\" duration=\"20246000\" />\r\n      <workItem from=\"1753171405556\" duration=\"9340000\" />\r\n      <workItem from=\"1753183388149\" duration=\"53000\" />\r\n      <workItem from=\"1753183683493\" duration=\"30000\" />\r\n      <workItem from=\"1753183838413\" duration=\"5000\" />\r\n      <workItem from=\"1753184071779\" duration=\"90000\" />\r\n      <workItem from=\"1753184343159\" duration=\"26000\" />\r\n      <workItem from=\"1753184397000\" duration=\"472000\" />\r\n      <workItem from=\"1753184896716\" duration=\"17000\" />\r\n      <workItem from=\"1753184947132\" duration=\"10000\" />\r\n      <workItem from=\"1753190538522\" duration=\"410000\" />\r\n      <workItem from=\"1753191028888\" duration=\"5365000\" />\r\n      <workItem from=\"1753257798618\" duration=\"2673000\" />\r\n      <workItem from=\"1753260697768\" duration=\"8955000\" />\r\n      <workItem from=\"1753270732392\" duration=\"4359000\" />\r\n    </task>\r\n    <servers />\r\n  </component>\r\n  <component name=\"TypeScriptGeneratedFilesManager\">\r\n    <option name=\"version\" value=\"3\" />\r\n  </component>\r\n  <component name=\"UnknownFeatures\">\r\n    <option featureType=\"com.intellij.fileTypeFactory\" implementationName=\".env\" />\r\n  </component>\r\n  <component name=\"com.intellij.coverage.CoverageDataManagerImpl\">\r\n    <SUITE FILE_PATH=\"coverage/AtlanticDivingCenterCRM$Flask__crm_mergulho_smtp_py_.coverage\" NAME=\"Flask (crm_mergulho_smtp.py) Coverage Results\" MODIFIED=\"1752762438139\" SOURCE_PROVIDER=\"com.intellij.coverage.DefaultCoverageFileProvider\" RUNNER=\"coverage.py\" COVERAGE_BY_TEST_ENABLED=\"false\" COVERAGE_TRACING_ENABLED=\"false\" WORKING_DIRECTORY=\"$PROJECT_DIR$\" />\r\n    <SUITE FILE_PATH=\"coverage/crm_mergulho_smtp_py$Flask__crm_mergulho_smtp_py_.coverage\" NAME=\"Flask (crm_mergulho_smtp.py) Coverage Results\" MODIFIED=\"1753192340259\" SOURCE_PROVIDER=\"com.intellij.coverage.DefaultCoverageFileProvider\" RUNNER=\"coverage.py\" COVERAGE_BY_TEST_ENABLED=\"false\" COVERAGE_TRACING_ENABLED=\"false\" WORKING_DIRECTORY=\"$PROJECT_DIR$\" />\r\n    <SUITE FILE_PATH=\"coverage/AtlanticDivingCenterCRM$AtlanticDivingCenterCRM.coverage\" NAME=\"AtlanticDivingCenterCRM Coverage Results\" MODIFIED=\"1752658253496\" SOURCE_PROVIDER=\"com.intellij.coverage.DefaultCoverageFileProvider\" RUNNER=\"coverage.py\" COVERAGE_BY_TEST_ENABLED=\"false\" COVERAGE_TRACING_ENABLED=\"false\" WORKING_DIRECTORY=\"$PROJECT_DIR$\" />\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/workspace.xml b/.idea/workspace.xml
+--- a/.idea/workspace.xml	(revision e871715a9ad41b0dc5f2ad4dffb8897a99d819f2)
++++ b/.idea/workspace.xml	(date 1753280999099)
+@@ -4,23 +4,7 @@
+     <option name="autoReloadType" value="SELECTIVE" />
+   </component>
+   <component name="ChangeListManager">
+-    <list default="true" id="ecc8d2d0-dffe-4cab-967b-a29a2741a503" name="Changes" comment="">
+-      <change afterPath="$PROJECT_DIR$/.idea/AtlanticDivingCenterCRM.iml" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/templates/email_feedback.html" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/templates/email_feedback_internacional_alemao.html" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/templates/email_feedback_internacional_frances.html" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/templates/email_feedback_internacional_ingles.html" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/templates/formulario_clientes.html" afterDir="false" />
+-      <change afterPath="$PROJECT_DIR$/templates/partials/tabela_clientes.html" afterDir="false" />
+-    </list>
++    <list default="true" id="ecc8d2d0-dffe-4cab-967b-a29a2741a503" name="Changes" comment="" />
+     <option name="SHOW_DIALOG" value="false" />
+     <option name="HIGHLIGHT_CONFLICTS" value="true" />
+     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+@@ -58,27 +42,27 @@
+     <option name="hideEmptyMiddlePackages" value="true" />
+     <option name="showLibraryContents" value="true" />
+   </component>
+-  <component name="PropertiesComponent">{
+-  &quot;keyToString&quot;: {
+-    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+-    &quot;Flask server.AtlanticDivingCenterCRM.executor&quot;: &quot;Run&quot;,
+-    &quot;Flask server.Flask (crm_mergulho_smtp.py).executor&quot;: &quot;Run&quot;,
+-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+-    &quot;last_opened_file_path&quot;: &quot;C:/Users/gugar/PycharmProjects/AtlanticDivingCenterCRM&quot;,
+-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.sourceCode.Python&quot;,
+-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
++  <component name="PropertiesComponent"><![CDATA[{
++  "keyToString": {
++    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
++    "DefaultHtmlFileTemplate": "HTML File",
++    "Flask server.AtlanticDivingCenterCRM.executor": "Run",
++    "Flask server.Flask (crm_mergulho_smtp.py).executor": "Run",
++    "RunOnceActivity.ShowReadmeOnStart": "true",
++    "RunOnceActivity.git.unshallow": "true",
++    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
++    "git-widget-placeholder": "main",
++    "ignore.virus.scanning.warn.message": "true",
++    "last_opened_file_path": "C:/Users/gugar/PycharmProjects/AtlanticDivingCenterCRM",
++    "node.js.detected.package.eslint": "true",
++    "node.js.detected.package.tslint": "true",
++    "node.js.selected.package.eslint": "(autodetect)",
++    "node.js.selected.package.tslint": "(autodetect)",
++    "nodejs_package_manager_path": "npm",
++    "settings.editor.selected.configurable": "preferences.sourceCode.Python",
++    "vue.rearranger.settings.migration": "true"
+   }
+-}</component>
++}]]></component>
+   <component name="RecentsManager">
+     <key name="MoveFile.RECENT_KEYS">
+       <recent name="C:\Users\gugar\PycharmProjects\AtlanticDivingCenterCRM\templates" />
+@@ -159,7 +143,7 @@
+       <workItem from="1753191028888" duration="5365000" />
+       <workItem from="1753257798618" duration="2673000" />
+       <workItem from="1753260697768" duration="8955000" />
+-      <workItem from="1753270732392" duration="4359000" />
++      <workItem from="1753270732392" duration="4658000" />
+     </task>
+     <servers />
+   </component>
+Index: README.md
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/README.md b/README.md
+new file mode 100644
+--- /dev/null	(date 1753281051155)
++++ b/README.md	(date 1753281051155)
+@@ -0,0 +1,1 @@
++This is my first project as a intership enroller. This is also my first all solo project. Hope it goes well.
