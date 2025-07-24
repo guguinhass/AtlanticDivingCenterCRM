@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, url_for, render_template, send_file, session
+from flask import Flask, request, redirect, url_for, render_template, send_file, session, flash
 from datetime import datetime, timedelta
 import smtplib
 from email.mime.text import MIMEText
@@ -337,12 +337,15 @@ def exportar_emails():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        correct_username = request.form['username']
-        correct_password = request.form['password']
-        if correct_username == username and correct_password == password:
+        username = request.form['username']
+        password = request.form['password']
+        if username == 'admin' and password == 'password123':
+            session['logged_in'] = True
             return redirect(url_for('index'))
         else:
-            return render_template('login.html', error='Invalid username or password')
+            flash('Invalid credentials')
+    # This line ensures a response is always returned
+    return render_template('login.html')
 
 def open_browser():
     webbrowser.open_new_tab("http://127.0.0.1:5000")
