@@ -14,6 +14,7 @@ import webbrowser
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 from functools import wraps
+from openpyxl.styles import Alignment
 
 #--------Load Environment Variables-------
 load_dotenv()
@@ -296,7 +297,9 @@ def exportar_emails():
             'Nacionalidade': cliente["nacionalidade"].capitalize(),
             '1º Email Enviado': 'Sim' if cliente["primeiro_email_enviado"] else 'Não',
             '2º Email Enviado': 'Sim' if cliente["segundo_email_enviado"] else 'Não',
-            'Email Manual': 'Sim' if cliente["email_manual_enviado"] else 'Não'
+            'Email Manual': 'Sim' if cliente["email_manual_enviado"] else 'Não',
+            'Fatura com Iva': cliente["valor_fatura"] * 1.22,
+            'IVA': cliente["valor_fatura"] * 0.22
         } for cliente in clientes]
 
         df = pd.DataFrame(clientes_data)
@@ -307,7 +310,7 @@ def exportar_emails():
             workbook = writer.book
             worksheet = writer.sheets['Clientes']
 
-            for row in worksheet.iter_rows(min_row=2, min_col=5, max_col=5):
+            for row in worksheet.iter_rows(min_row=2, min_col=5, max_col=11):
                 for cell in row:
                     cell.number_format = '#,##0.00" €"'
 
@@ -320,8 +323,13 @@ def exportar_emails():
                             max_length = len(str(cell.value))
                     except:
                         pass
-                adjusted_width = (max_length + 2)
+                adjusted_width = (max_length + 5)  # instead of +2
                 worksheet.column_dimensions[column_letter].width = adjusted_width
+
+            # Center all cells
+            for row in worksheet.iter_rows():
+                for cell in row:
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
 
         output.seek(0)
         return send_file(
