@@ -248,9 +248,16 @@ def debug_cliente(email):
 #--------Table Refreshing------------
 @app.route('/atualizar-tabela')
 def atualizar_tabela():
-    response = supabase.table("clientes").select("*").order("nome").execute()
-    clientes = response.data
-    return render_template('partials/tabela_clientes.html', clientes=clientes)
+    clientes = supabase.table("clientes").select("*").execute().data
+    for cliente in clientes:
+        if isinstance(cliente['data_mergulho'], str):
+            cliente['formatted_date'] = datetime.strptime(
+                cliente['data_mergulho'],
+                '%Y-%m-%d'
+            ).strftime('%d/%m/%Y')
+        else:
+            cliente['formatted_date'] = cliente['data_mergulho'].strftime('%d/%m/%Y')
+    return render_template("partials/tabela_clientes.html", clientes=clientes)
 
 
 #--------Send Email to All------------

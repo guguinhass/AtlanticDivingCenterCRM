@@ -3,7 +3,7 @@
     <td>{{ cliente.nome }}</td>
     <td>{{ cliente.email }}</td>
     <td>{{ cliente.num_mergulho }}</td>
-       <td>{{ cliente.formatted_date }}</td>
+    <td>{{ cliente.formatted_date }}</td>
     <td>{{ "%.2f"|format(cliente.valor_fatura) }} €</td>
     <td>{{ cliente.nacionalidade.capitalize() }}</td>
     <td class="{{ 'text-success' if cliente.primeiro_email_enviado else 'text-danger' }}">
