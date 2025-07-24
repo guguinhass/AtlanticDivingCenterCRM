@@ -33,11 +33,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-
-
 #------------Login Credentials-------------
 app.secret_key = os.getenv('APP_SECRET_KEY')
-
+username = os.getenv('APP_SECRET_USERNAME')
+password = os.getenv('APP_SECRET_PASSWORD')
 
 #--------Email Configuration------------
 app.config['SMTP_SERVER'] = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
@@ -58,6 +57,8 @@ def login_required(f):
 def logout():
     session.pop('logged_in', None)
     return redirect(url_for('login'))
+
+
 
 # --- Email Functions ---
 def enviar_email(destinatario, assunto, nome, internacional):
@@ -336,8 +337,6 @@ def exportar_emails():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    username = os.getenv('APP_SECRET_USERNAME')
-    password = os.getenv('APP_SECRET_PASSWORD')
     if request.method == 'POST':
         entered_username = request.form['username']
         entered_password = request.form['password']
