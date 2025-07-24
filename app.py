@@ -114,7 +114,7 @@ def handle_scheduled_tasks():
     if not hasattr(app, 'last_email_check'):
         app.last_email_check = datetime.now()
 
-    # Check emails every 5 minutes (adjust as needed)
+    # Check emails every minute (adjust as needed)
     if datetime.now() - app.last_email_check > timedelta(minutes=1):
         check_and_send_emails()
         app.last_email_check = datetime.now()
@@ -151,9 +151,9 @@ def index():
             cliente['formatted_date'] = datetime.strptime(
                 cliente['data_mergulho'],
                 '%Y-%m-%d'
-            ).strftime('%Y/%m/%d')
+            ).strftime('%d/%m/%Y')
         else:
-            cliente['formatted_date'] = cliente['data_mergulho'].strftime('%Y/%m/%d')
+            cliente['formatted_date'] = cliente['data_mergulho'].strftime('%d/%m/%Y')
 
     return render_template("formulario_clientes.html", clientes=clientes, mensagem=mensagem)
 
