@@ -344,7 +344,7 @@ def login():
             session['logged_in'] = True
             return redirect(url_for('index'))
         else:
-            flash('Invalid credentials')
+            logger.error('Invalid credentials')
     return render_template('login.html')
 
 def open_browser():
