@@ -40,7 +40,7 @@ username = os.getenv('APP_SECRET_USERNAME')
 password = os.getenv('APP_SECRET_PASSWORD')
 app.secret_key = os.getenv('APP_SECRET_KEY')
 
-logger.info(username + password)
+
 #--------Email Configuration------------
 app.config['SMTP_SERVER'] = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
 app.config['SMTP_PORT'] = int(os.getenv('SMTP_PORT', 465))
