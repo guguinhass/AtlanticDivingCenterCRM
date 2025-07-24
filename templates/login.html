@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    
     <meta charset="UTF-8">
     <title>Login | Atlantic Diving Center CRM</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -28,11 +29,18 @@
             margin-bottom: 1.5rem;
             text-align: center;
         }
+        .login-logo {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 150px;
+            height: auto;
+        }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <h2 class="login-title">Atlantic Diving Center</h2>
+        <img src="{{ url_for('static', filename='LOGO_AZUL.png') }}" alt="Logo" class="login-logo mb-3">
         {% with messages = get_flashed_messages() %}
           {% if messages %}
             <div class="alert alert-danger" role="alert">
