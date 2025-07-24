@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, url_for, render_template, send_file
+from flask import Flask, request, redirect, url_for, render_template, send_file, session
 from datetime import datetime, timedelta
 import smtplib
 from email.mime.text import MIMEText
@@ -14,6 +14,11 @@ import webbrowser
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 import time
+from functools import wraps
+
+#------------Login Credentials-------------
+username=os.getenv('app.secret_username')
+password=os.getenv('app.secret_key')
 
 #--------Initialize Scheduler-------------
 scheduler = BackgroundScheduler(daemon=True)
@@ -40,6 +45,19 @@ app.config['SMTP_PORT'] = int(os.getenv('SMTP_PORT', 465))
 app.config['SMTP_USERNAME'] = os.getenv('SMTP_USERNAME')
 app.config['SMTP_PASSWORD'] = os.getenv('SMTP_PASSWORD')
 
+#---------Login/Logout Functions--------
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
 
 # --- Email Functions ---
 def enviar_email(destinatario, assunto, nome, internacional):
@@ -122,6 +140,7 @@ def handle_scheduled_tasks():
 
 #------------Flask Routes-----------
 @app.route('/', methods=['GET', 'POST'])
+@login_required
 def index():
     mensagem = None
     if request.method == 'POST':
@@ -315,7 +334,15 @@ def exportar_emails():
         logger.error(f"Erro ao exportar emails: {str(e)}")
         return redirect(url_for('index'))
 
-
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        correct_username = request.form['username']
+        correct_password = request.form['password']
+        if correct_username == username and correct_password == password:
+            return redirect(url_for('index'))
+        else:
+            return render_template('login.html', error='Invalid username or password')
 
 def open_browser():
     webbrowser.open_new_tab("http://127.0.0.1:5000")
