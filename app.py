@@ -16,9 +16,8 @@ import atexit
 import time
 from functools import wraps
 
-#------------Login Credentials-------------
-username=os.getenv('app.secret_username')
-password=os.getenv('app.secret_key')
+#--------Load Environment Variables-------
+load_dotenv()
 
 #--------Initialize Scheduler-------------
 scheduler = BackgroundScheduler(daemon=True)
@@ -26,9 +25,6 @@ scheduler = BackgroundScheduler(daemon=True)
 scheduler.start()
 
 atexit.register(lambda: scheduler.shutdown())
-
-#--------Load Environment Variables-------
-load_dotenv()
 
 #--------Initialize Supabase-------
 supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
@@ -38,6 +34,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+
+#------------Login Credentials-------------
+app.username=os.getenv('SECRET_USERNAME')
+app.secret_key=os.getenv('SECRET_KEY')
 
 #--------Email Configuration------------
 app.config['SMTP_SERVER'] = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
@@ -339,7 +340,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if username == 'admin' and password == 'password123':
+        if username == app.username and password == app.secret_key:
             session['logged_in'] = True
             return redirect(url_for('index'))
         else:
