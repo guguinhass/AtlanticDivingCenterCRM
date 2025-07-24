@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    
     <meta charset="UTF-8">
     <title>Login | Atlantic Diving Center CRM</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,7 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #0077b6 0%, #48cae4 100%);
+            background: linear-gradient(135deg, #0077b6 0%, #dee4e5 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -28,10 +29,18 @@
             margin-bottom: 1.5rem;
             text-align: center;
         }
+        .login-logo {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 80px; /* Adjust as needed */
+            height: auto;
+        }
     </style>
 </head>
 <body>
     <div class="login-container">
+        <img src="{{ url_for('static', filename='LOGO_AZUL.png') }}" alt="Logo" class="login-logo mb-3">
         <h2 class="login-title">Atlantic Diving Center</h2>
         {% with messages = get_flashed_messages() %}
           {% if messages %}
