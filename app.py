@@ -34,9 +34,9 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 #------------Login Credentials-------------
-app.secret_key = os.getenv('APP_SECRET_KEY')
 username = os.getenv('APP_SECRET_USERNAME')
 password = os.getenv('APP_SECRET_PASSWORD')
+app.secret_key = os.getenv('APP_SECRET_KEY')
 
 #--------Email Configuration------------
 app.config['SMTP_SERVER'] = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
@@ -344,8 +344,10 @@ def login():
             session['logged_in'] = True
             return redirect(url_for('index'))
         else:
-            logger.error('Invalid credentials')
+            logger.info('Invalid credentials')
+    # This line ensures a response is always returned
     return render_template('login.html')
+
 
 def open_browser():
     webbrowser.open_new_tab("http://127.0.0.1:5000")
