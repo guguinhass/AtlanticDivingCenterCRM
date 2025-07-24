@@ -36,8 +36,6 @@ app = Flask(__name__)
 
 
 #------------Login Credentials-------------
-username = os.getenv('APP_SECRET_USERNAME')
-password = os.getenv('APP_SECRET_PASSWORD')
 app.secret_key = os.getenv('APP_SECRET_KEY')
 
 
@@ -338,6 +336,8 @@ def exportar_emails():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    username = os.getenv('APP_SECRET_USERNAME')
+    password = os.getenv('APP_SECRET_PASSWORD')
     if request.method == 'POST':
         entered_username = request.form['username']
         entered_password = request.form['password']
