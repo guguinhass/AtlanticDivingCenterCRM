@@ -37,8 +37,9 @@ app = Flask(__name__)
 
 
 #------------Login Credentials-------------
-app.username=os.getenv('SECRET_USERNAME')
-app.secret_key=os.getenv('SECRET_KEY')
+username = os.getenv('APP_SECRET_USERNAME')
+password = os.getenv('APP_SECRET_PASSWORD')
+app.secret_key = os.getenv('APP_SECRET_KEY')
 
 #--------Email Configuration------------
 app.config['SMTP_SERVER'] = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
@@ -338,14 +339,13 @@ def exportar_emails():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        if username == app.username and password == app.secret_key:
+        entered_username = request.form['username']
+        entered_password = request.form['password']
+        if entered_username == username and entered_password == password:
             session['logged_in'] = True
             return redirect(url_for('index'))
         else:
             flash('Invalid credentials')
-    # This line ensures a response is always returned
     return render_template('login.html')
 
 def open_browser():
