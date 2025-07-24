@@ -33,7 +33,7 @@
             display: block;
             margin-left: auto;
             margin-right: auto;
-            width: 80px; /* Adjust as needed */
+            width: 150px;
             height: auto;
         }
     </style>
@@ -41,7 +41,6 @@
 <body>
     <div class="login-container">
         <img src="{{ url_for('static', filename='LOGO_AZUL.png') }}" alt="Logo" class="login-logo mb-3">
-        <h2 class="login-title">Atlantic Diving Center</h2>
         {% with messages = get_flashed_messages() %}
           {% if messages %}
             <div class="alert alert-danger" role="alert">
