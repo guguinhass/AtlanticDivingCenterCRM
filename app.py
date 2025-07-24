@@ -13,7 +13,6 @@ from supabase import create_client
 import webbrowser
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
-import time
 from functools import wraps
 
 #--------Load Environment Variables-------
