@@ -32,8 +32,7 @@
         </a>
 
 
-        <form action="{{ url_for('enviar_manual_todos') }}" method="POST"
-              onsubmit="return confirm('Deseja enviar email para TODOS os clientes?');">
+        <form id="enviar-todos-form" action="{{ url_for('enviar_manual_todos') }}" method="POST">
             <button type="submit" class="btn btn-success">
                 Enviar email para todos
             </button>
@@ -69,8 +68,20 @@
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Valor da Fatura:</label>
-            <input type="number" step="0.01" name="valor_fatura" class="form-control" required min="0">
+            <label class="form-label">Valor:</label>
+            <div class="input-group mb-2">
+                <input type="number" step="0.01" name="valor_fatura_base" id="valor_fatura_base" class="form-control" required min="0" placeholder="Valor sem IVA">
+                <span class="input-group-text">€</span>
+            </div>
+            <div class="form-text">Com IVA (22%): <span id="valor_com_iva" class="fw-bold">0.00</span> €</div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Valor Final (pode editar):</label>
+            <div class="input-group">
+                <input type="number" step="0.01" name="valor_fatura" id="valor_fatura" class="form-control" required min="0" placeholder="Valor final a ser salvo">
+                <span class="input-group-text">€</span>
+            </div>
+            <div class="form-text">Este valor será salvo na tabela.</div>
         </div>
 
         <div class="mb-3">
@@ -105,6 +116,7 @@
         <table class="table table-bordered table-striped table-hover">
             <thead class="table-dark">
             <tr>
+                <th>Adicionado por</th>
                 <th>Nome</th>
                 <th>Email</th>
                 <th>Nº Mergulhos</th>
@@ -120,6 +132,7 @@
             <tbody>
             {% for cliente in clientes %}
                 <tr>
+                    <td>{{ cliente.adicionado_por if cliente.adicionado_por else 'Desconhecido' }}</td>
                     <td>{{ cliente.nome }}</td>
                     <td>{{ cliente.email }}</td>
                     <td>{{ cliente.num_mergulho }}</td>
@@ -131,7 +144,7 @@
                     <td>{{ 'Sim' if cliente.email_manual_enviado else 'Não' }}</td>
                     <td class="d-flex gap-2">
                         <form action="{{ url_for('enviar_manual', email=cliente.email) }}" method="post">
-                            <button type="submit" class="btn btn-sm btn-success">Enviar Email</button>
+                            <button type="submit" class="btn btn-sm btn-success" {% if cliente.email_manual_enviado %}disabled{% endif %}>Enviar Email</button>
                         </form>
                         <form action="{{ url_for('remover_cliente', email=cliente.email) }}" method="post"
                               onsubmit="return confirm('Tem certeza que deseja remover {{ cliente.nome }}?');">
@@ -227,6 +240,30 @@
     document.addEventListener('DOMContentLoaded', function () {
         configurarEventosForms();
         atualizarTabela();
+        // Add confirmation for 'Enviar email para todos' form
+        var enviarTodosForm = document.getElementById('enviar-todos-form');
+        if (enviarTodosForm) {
+            enviarTodosForm.addEventListener('submit', function(e) {
+                if (!confirm('Deseja enviar email para TODOS os clientes?')) {
+                    e.preventDefault();
+                }
+            });
+        }
+        // IVA calculation logic
+        var baseInput = document.getElementById('valor_fatura_base');
+        var ivaSpan = document.getElementById('valor_com_iva');
+        var finalInput = document.getElementById('valor_fatura');
+        function updateIVA() {
+            var base = parseFloat(baseInput.value) || 0;
+            var comIva = (base * 1.22).toFixed(2);
+            ivaSpan.textContent = comIva;
+            if (!finalInput.value || parseFloat(finalInput.value) === 0) {
+                finalInput.value = comIva;
+            }
+        }
+        baseInput.addEventListener('input', updateIVA);
+        // Initialize on load
+        updateIVA();
     });
 </script>
 </body>

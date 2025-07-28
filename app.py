@@ -154,6 +154,7 @@ def index():
             mensagem = f"Email {email} already registered"
         else:
             supabase.table("clientes").insert({
+                "adicionado_por": session.get('username', 'desconhecido'),
                 "nome": request.form['nome'],
                 "num_mergulho": int(request.form['num_mergulho']),
                 "email": email,
@@ -162,7 +163,8 @@ def index():
                 "nacionalidade": request.form.get('nacionalidade', 'portugues'),
                 "primeiro_email_enviado": False,
                 "segundo_email_enviado": False,
-                "email_manual_enviado": False
+                "email_manual_enviado": False,
+
             }).execute()
             return redirect(url_for('index'))
 
@@ -289,6 +291,7 @@ def exportar_emails():
         clientes = response.data
 
         clientes_data = [{
+            'Adicionado por': cliente["adicionado_por"],
             'Nome': cliente["nome"],
             'Email': cliente["email"],
             'Nº Mergulhos': cliente["num_mergulho"],
@@ -350,6 +353,7 @@ def login():
         entered_password = request.form['password']
         if entered_username == username and entered_password == password:
             session['logged_in'] = True
+            session['username'] = entered_username
             return redirect(url_for('index'))
         else:
             logger.info('Invalid credentials')

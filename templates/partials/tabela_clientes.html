@@ -1,5 +1,6 @@
 {% for cliente in clientes %}
 <tr>
+    <td>{{ cliente.adicionado_por if cliente.adicionado_por else 'Desconhecido' }}</td>
     <td>{{ cliente.nome }}</td>
     <td>{{ cliente.email }}</td>
     <td>{{ cliente.num_mergulho }}</td>
@@ -17,7 +18,7 @@
     </td>
     <td class="d-flex gap-2">
         <form action="{{ url_for('enviar_manual', email=cliente.email) }}" method="post" class="form-enviar">
-            <button type="submit" class="btn btn-sm btn-success">Enviar</button>
+            <button type="submit" class="btn btn-sm btn-success" {% if cliente.email_manual_enviado %}disabled{% endif %}>Enviar</button>
         </form>
         <form action="{{ url_for('remover_cliente', email=cliente.email) }}" method="post" class="form-remover">
             <button type="submit" class="btn btn-sm btn-danger">Remover</button>
