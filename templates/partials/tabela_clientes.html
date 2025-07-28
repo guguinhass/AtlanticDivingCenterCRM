@@ -6,6 +6,7 @@
     <td>{{ cliente.num_mergulho }}</td>
     <td>{{ cliente.formatted_date }}</td>
     <td>{{ "%.2f"|format(cliente.valor_fatura) }} €</td>
+    <td>{% if cliente.desconto %}{{ cliente.desconto }}%{% else %}-{% endif %}</td>
     <td>{{ cliente.nacionalidade.capitalize() }}</td>
     <td class="{{ 'text-success' if cliente.primeiro_email_enviado else 'text-danger' }}">
         {{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}
@@ -17,11 +18,17 @@
         {{ 'Sim' if cliente.email_manual_enviado else 'Não' }}
     </td>
     <td class="d-flex gap-2">
-        <form action="{{ url_for('enviar_manual', email=cliente.email) }}" method="post" class="form-enviar">
-            <button type="submit" class="btn btn-sm btn-success" {% if cliente.email_manual_enviado %}disabled{% endif %}>Enviar</button>
-        </form>
-        <form action="{{ url_for('remover_cliente', email=cliente.email) }}" method="post" class="form-remover">
-            <button type="submit" class="btn btn-sm btn-danger">Remover</button>
+        <button type="button" class="btn btn-sm btn-success"
+            
+            data-email="{{ cliente.email }}"
+            data-nome="{{ cliente.nome }}"
+            data-nacionalidade="{{ cliente.nacionalidade }}"
+            onclick="openEmailModalFromButton(this)">
+            Enviar Email
+        </button>
+        <form action="{{ url_for('remover_cliente', email=cliente.email) }}" method="post"
+              onsubmit="return confirm('Tem certeza que deseja remover {{ cliente.nome }}?');">
+            <button type="submit" class="btn btn-sm btn-danger">Remover Cliente</button>
         </form>
     </td>
 </tr>

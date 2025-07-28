@@ -3,7 +3,10 @@
 <head>
     <title>CRM Atlantic Diving Center</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <meta http-equiv="refresh" content="30" charset="utf-8">
+    <!-- Add Quill CSS in <head> -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
     <style>
         .text-success {
             color: #28a745 !important;
@@ -75,6 +78,7 @@
             </div>
             <div class="form-text">Com IVA (22%): <span id="valor_com_iva" class="fw-bold">0.00</span> €</div>
         </div>
+
         <div class="mb-3">
             <label class="form-label">Valor Final (pode editar):</label>
             <div class="input-group">
@@ -85,10 +89,15 @@
         </div>
 
         <div class="mb-3">
+            <label class="form-label">Desconto (%):</label>
+            <input type="number" name="desconto" id="desconto" class="form-control" min="0" max="100" step="0.01" placeholder="0">
+            <div class="form-text">Opcional. Percentual de desconto a ser aplicado ao valor com IVA.</div>
+        </div>
+
+        <div class="mb-3">
             <label class="form-label">Nacionalidade:</label>
             <div class="form-check">
-                <input class="form-check-input" type="radio" name="nacionalidade" id="português" value="português"
-                       checked>
+                <input class="form-check-input" type="radio" name="nacionalidade" id="português" value="português" checked>
                 <label class="form-check-label" for="português">Português</label>
             </div>
             <div class="form-check">
@@ -121,7 +130,8 @@
                 <th>Email</th>
                 <th>Nº Mergulhos</th>
                 <th>Data Mergulho</th>
-                <th>Valor (€)</th>
+                <th>Valor   (€)</th>
+                <th>Desconto (%)</th>
                 <th>Nacionalidade</th>
                 <th>1º Email</th>
                 <th>2º Email</th>
@@ -137,28 +147,70 @@
                     <td>{{ cliente.email }}</td>
                     <td>{{ cliente.num_mergulho }}</td>
                     <td>{{ cliente.formatted_date }}</td>
-                    <td>{{ "%.2f"|format(cliente.valor_fatura) }} €</td>
+                    <td>
+                        {{ "%.2f"|format(cliente.valor_fatura) }} €
+                        {% if cliente.desconto and cliente.desconto > 0 %}
+                            <br>
+                            <span class="text-success">(com desconto: {{ "%.2f"|format(cliente.valor_fatura * (1 - cliente.desconto / 100)) }} €)</span>
+                        {% endif %}
+                    </td>
+                    <td>{% if cliente.desconto %}{{ cliente.desconto }}%{% else %}-{% endif %}</td>
                     <td>{{ cliente.nacionalidade.capitalize() }}</td>
                     <td>{{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}</td>
                     <td>{{ 'Sim' if cliente.segundo_email_enviado else 'Não' }}</td>
                     <td>{{ 'Sim' if cliente.email_manual_enviado else 'Não' }}</td>
                     <td class="d-flex gap-2">
-                        <form action="{{ url_for('enviar_manual', email=cliente.email) }}" method="post">
-                            <button type="submit" class="btn btn-sm btn-success" {% if cliente.email_manual_enviado %}disabled{% endif %}>Enviar Email</button>
-                        </form>
+                        <button type="button" class="btn btn-sm btn-success"
+                                
+                                data-email="{{ cliente.email }}"
+                                data-nome="{{ cliente.nome }}"
+                                data-nacionalidade="{{ cliente.nacionalidade }}"
+                                onclick="openEmailModalFromButton(this)">
+                            Enviar Email
+                        </button>
                         <form action="{{ url_for('remover_cliente', email=cliente.email) }}" method="post"
                               onsubmit="return confirm('Tem certeza que deseja remover {{ cliente.nome }}?');">
-                            <button type="submit" class="btn btn-sm btn-danger">Remover</button>
+                            <button type="submit" class="btn btn-sm btn-danger">Remover Cliente</button>
                         </form>
                     </td>
                 </tr>
             {% else %}
                 <tr>
-                    <td colspan="9" class="text-center">Nenhum cliente cadastrado</td>
+                    <td colspan="11" class="text-center">Nenhum cliente cadastrado</td>
                 </tr>
             {% endfor %}
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- Email Edit Modal -->
+<div class="modal fade" id="emailModal" tabindex="-1" aria-labelledby="emailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="emailModalLabel">Editar Email</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="emailForm">
+                    <input type="hidden" id="clienteEmail" name="email">
+                    <div class="mb-3">
+                        <label for="emailSubject" class="form-label">Assunto:</label>
+                        <input type="text" class="form-control" id="emailSubject" name="subject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="emailContent" class="form-label">Conteúdo do Email:</label>
+                        <div id="quillEditor" style="height: 300px;"></div>
+                        <input type="hidden" id="emailContent" name="content">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="sendCustomEmail()">Enviar Email</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -236,14 +288,14 @@
 
     setInterval(atualizarTabela, 10000);
 
-
+    var quill;
     document.addEventListener('DOMContentLoaded', function () {
         configurarEventosForms();
         atualizarTabela();
         // Add confirmation for 'Enviar email para todos' form
         var enviarTodosForm = document.getElementById('enviar-todos-form');
         if (enviarTodosForm) {
-            enviarTodosForm.addEventListener('submit', function(e) {
+            enviarTodosForm.addEventListener('submit', function (e) {
                 if (!confirm('Deseja enviar email para TODOS os clientes?')) {
                     e.preventDefault();
                 }
@@ -253,18 +305,88 @@
         var baseInput = document.getElementById('valor_fatura_base');
         var ivaSpan = document.getElementById('valor_com_iva');
         var finalInput = document.getElementById('valor_fatura');
+        var descontoInput = document.getElementById('desconto');
         function updateIVA() {
             var base = parseFloat(baseInput.value) || 0;
             var comIva = (base * 1.22).toFixed(2);
             ivaSpan.textContent = comIva;
-            if (!finalInput.value || parseFloat(finalInput.value) === 0) {
-                finalInput.value = comIva;
+            var desconto = parseFloat(descontoInput.value) || 0;
+            var valorFinal = comIva;
+            if (desconto > 0 && desconto < 100) {
+                valorFinal = (comIva * (1 - desconto / 100)).toFixed(2);
             }
+            finalInput.value = valorFinal;
         }
         baseInput.addEventListener('input', updateIVA);
+        descontoInput.addEventListener('input', updateIVA);
         // Initialize on load
         updateIVA();
+        // Initialize Quill
+        quill = new Quill('#quillEditor', {
+            theme: 'snow'
+        });
     });
+
+    function openEmailModal(email, nome, nacionalidade) {
+        console.log('openEmailModal called with:', email, nome, nacionalidade);
+        document.getElementById('clienteEmail').value = email;
+        // Set default subject based on nationality
+        var defaultSubject = {
+            'inglês': "Thank you for your diving experience!",
+            'francês': "Merci d'avoir plongé avec nous",
+            'alemão': "Danke für Ihr Taucherlebnis",
+        }[nacionalidade] || "Obrigado pela sua experiência de mergulho!";
+        document.getElementById('emailSubject').value = defaultSubject;
+        // Load default email content based on nationality
+        fetch(`/get-email-template/${email}`)
+            .then(response => response.json())
+            .then(data => {
+                quill.root.innerHTML = data.content;
+            })
+            .catch(error => {
+                console.error('Error loading template:', error);
+                quill.root.innerHTML = `Olá ${nome},<br><br>Obrigado pela sua experiência de mergulho!<br><br>Atenciosamente,<br>Atlantic Diving Center`;
+            });
+        try {
+            var modal = new bootstrap.Modal(document.getElementById('emailModal'));
+            console.log('Modal created, showing...');
+            modal.show();
+            console.log('Modal show() called');
+        } catch (error) {
+            console.error('Error creating/showing modal:', error);
+        }
+    }
+
+    function sendCustomEmail() {
+        document.getElementById('emailContent').value = quill.root.innerHTML;
+        var formData = new FormData(document.getElementById('emailForm'));
+        fetch('/enviar-email-personalizado', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                alert('Email enviado com sucesso!');
+                var modal = bootstrap.Modal.getInstance(document.getElementById('emailModal'));
+                modal.hide();
+                atualizarTabela();
+            } else {
+                alert('Erro ao enviar email');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erro ao enviar email');
+        });
+    }
+
+    function openEmailModalFromButton(btn) {
+        openEmailModal(
+            btn.getAttribute('data-email'),
+            btn.getAttribute('data-nome'),
+            btn.getAttribute('data-nacionalidade')
+        );
+    }
 </script>
 </body>
 </html>

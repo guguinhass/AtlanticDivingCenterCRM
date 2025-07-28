@@ -16,49 +16,51 @@ import atexit
 from functools import wraps
 from openpyxl.styles import Alignment
 
-#--------Load Environment Variables-------
+# --------Load Environment Variables-------
 load_dotenv()
 
-#--------Initialize Scheduler-------------
+# --------Initialize Scheduler-------------
 scheduler = BackgroundScheduler(daemon=True)
 
 scheduler.start()
 
 atexit.register(lambda: scheduler.shutdown())
 
-#--------Initialize Supabase-------
+# --------Initialize Supabase-------
 supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
-#--------Configure Logging---------
+# --------Configure Logging---------
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-#------------Login Credentials-------------
+# ------------Login Credentials-------------
 username = os.getenv('APP_SECRET_USERNAME')
 password = os.getenv('APP_SECRET_PASSWORD')
 app.secret_key = os.getenv('APP_SECRET_KEY')
 
-#--------Email Configuration------------
+# --------Email Configuration------------
 app.config['SMTP_SERVER'] = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
 app.config['SMTP_PORT'] = int(os.getenv('SMTP_PORT', 465))
 app.config['SMTP_USERNAME'] = os.getenv('SMTP_USERNAME')
 app.config['SMTP_PASSWORD'] = os.getenv('SMTP_PASSWORD')
 
-#---------Login/Logout Functions--------
+
+# ---------Login/Logout Functions--------
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('logged_in'):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
+
     return decorated_function
+
 
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)
     return redirect(url_for('login'))
-
 
 
 # --- Email Functions ---
@@ -96,7 +98,7 @@ def email_feedback(cliente):
     return enviar_email(cliente['email'], assunto, cliente['nome'], cliente['nacionalidade'])
 
 
-#----------Request-Based Email Checker-----------
+# ----------Request-Based Email Checker-----------
 def check_and_send_emails():
     with app.app_context():  # Ensure Flask context
         hoje = datetime.now().date()
@@ -119,7 +121,8 @@ def check_and_send_emails():
                         {"segundo_email_enviado": True}
                     ).eq("email", cliente['email']).execute()
 
-#------Email Sending Scheduler-------
+
+# ------Email Sending Scheduler-------
 scheduler.add_job(
     check_and_send_emails,
     'interval',
@@ -127,7 +130,8 @@ scheduler.add_job(
     timezone="Europe/Lisbon"
 )
 
-#---------Time-Checker----------
+
+# ---------Time-Checker----------
 @app.before_request
 def handle_scheduled_tasks():
     """Runs before each request to check emails"""
@@ -140,7 +144,7 @@ def handle_scheduled_tasks():
         app.last_email_check = datetime.now()
 
 
-#------------Flask Routes-----------
+# ------------Flask Routes-----------
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def index():
@@ -160,6 +164,7 @@ def index():
                 "email": email,
                 "data_mergulho": request.form['data_mergulho'],
                 "valor_fatura": float(request.form['valor_fatura']),
+                "desconto": float(request.form.get('desconto', 0)),
                 "nacionalidade": request.form.get('nacionalidade', 'portugues'),
                 "primeiro_email_enviado": False,
                 "segundo_email_enviado": False,
@@ -181,7 +186,7 @@ def index():
     return render_template("formulario_clientes.html", clientes=clientes, mensagem=mensagem)
 
 
-#--------Send Email Manually---------
+# --------Send Email Manually---------
 @app.route('/enviar/<email>', methods=['POST'])
 def enviar_manual(email):
     try:
@@ -214,7 +219,81 @@ def enviar_manual(email):
     return redirect(url_for('index'))
 
 
-#---------Remover---------
+# --------Get Email Template---------
+@app.route('/get-email-template/<email>')
+def get_email_template(email):
+    try:
+        response = supabase.table("clientes").select("*").eq("email", email).execute()
+        if not response.data:
+            return {'error': 'Cliente não encontrado'}, 404
+
+        cliente = response.data[0]
+
+        # Render the appropriate template based on nationality
+        template = {
+            'português': 'email_feedback.html',
+            'inglês': 'email_feedback_internacional_ingles.html',
+            'alemão': 'email_feedback_internacional_alemao.html',
+            'francês': 'email_feedback_internacional_frances.html',
+        }.get(cliente['nacionalidade'], 'email_feedback.html')
+
+        with app.app_context():
+            content = render_template(template, nome=cliente['nome'])
+            return {'content': content}
+
+    except Exception as e:
+        logger.error(f"Error getting email template: {str(e)}")
+        return {'error': str(e)}, 500
+
+
+# --------Send Custom Email---------
+@app.route('/enviar-email-personalizado', methods=['POST'])
+def enviar_email_personalizado():
+    try:
+        email = request.form.get('email')
+        subject = request.form.get('subject')
+        content = request.form.get('content')
+
+        # Fetch client from Supabase
+        response = supabase.table("clientes").select("*").eq("email", email).execute()
+        if not response.data:
+            return 'Cliente não encontrado', 404
+
+        cliente = response.data[0]
+
+        # Send the custom email
+        if enviar_email_personalizado_aux(cliente['email'], subject, content):
+            # Update in Supabase
+            supabase.table("clientes").update({"email_manual_enviado": True}).eq("email", email).execute()
+            logger.info(f'Email personalizado enviado com sucesso para {email}')
+            return '', 204
+        else:
+            logger.error(f'Falha ao enviar email personalizado para {email}')
+            return 'Falha ao enviar email', 400
+
+    except Exception as e:
+        logger.error(f'Erro ao enviar email personalizado: {str(e)}')
+        return str(e), 500
+
+
+def enviar_email_personalizado_aux(destinatario, assunto, conteudo):
+    try:
+        msg = MIMEMultipart("alternative")
+        msg['From'] = app.config['SMTP_USERNAME']
+        msg['To'] = destinatario
+        msg['Subject'] = assunto
+        msg.attach(MIMEText(conteudo, "html"))
+
+        with smtplib.SMTP_SSL(app.config['SMTP_SERVER'], app.config['SMTP_PORT']) as server:
+            server.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        logger.error(f"Email personalizado failed: {str(e)}")
+        return False
+
+
+# ---------Remover---------
 @app.route('/remover/<email>', methods=['POST'])
 def remover_cliente(email):
     try:
@@ -225,7 +304,7 @@ def remover_cliente(email):
         return str(e), 500
 
 
-#-------Send Email to All-----------
+# -------Send Email to All-----------
 @app.route('/enviar-todos', methods=['POST'])
 def enviar_manual_todos():
     try:
@@ -248,7 +327,8 @@ def enviar_manual_todos():
         logger.error(f'Erro ao enviar emails: {str(e)}')
         return redirect(url_for('index'))
 
-#--------Debug----------
+
+# --------Debug----------
 @app.route('/debug/<email>')
 def debug_cliente(email):
     response = supabase.table("clientes").select("*").eq("email", email).execute()
@@ -268,7 +348,7 @@ def debug_cliente(email):
     }
 
 
-#--------Table Refreshing------------
+# --------Table Refreshing------------
 @app.route('/atualizar-tabela')
 def atualizar_tabela():
     clientes = supabase.table("clientes").select("*").execute().data
@@ -283,26 +363,26 @@ def atualizar_tabela():
     return render_template("partials/tabela_clientes.html", clientes=clientes)
 
 
-#--------Send Email to All------------
+# --------Send Email to All------------
 @app.route('/exportar-emails')
 def exportar_emails():
     try:
         response = supabase.table("clientes").select("*").execute()
         clientes = response.data
-
         clientes_data = [{
             'Adicionado por': cliente["adicionado_por"],
             'Nome': cliente["nome"],
             'Email': cliente["email"],
             'Nº Mergulhos': cliente["num_mergulho"],
             'Data Mergulho': datetime.strptime(cliente["data_mergulho"], "%Y-%m-%d").strftime('%Y/%m/%d'),
-            'Valor da fatura(€)': cliente["valor_fatura"],
             'Nacionalidade': cliente["nacionalidade"].capitalize(),
             '1º Email Enviado': 'Sim' if cliente["primeiro_email_enviado"] else 'Não',
             '2º Email Enviado': 'Sim' if cliente["segundo_email_enviado"] else 'Não',
             'Email Manual': 'Sim' if cliente["email_manual_enviado"] else 'Não',
+            'Valor da fatura(€)': cliente["valor_fatura"],
             'Fatura com Iva': cliente["valor_fatura"] * 1.22,
-            'IVA': cliente["valor_fatura"] * 0.22
+            'IVA': cliente["valor_fatura"] * 0.22,
+            'Desconto': cliente["desconto"]
         } for cliente in clientes]
 
         df = pd.DataFrame(clientes_data)
@@ -345,6 +425,7 @@ def exportar_emails():
     except Exception as e:
         logger.error(f"Erro ao exportar emails: {str(e)}")
         return redirect(url_for('index'))
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
