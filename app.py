@@ -15,6 +15,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 from functools import wraps
 from openpyxl.styles import Alignment
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # --------Load Environment Variables-------
 load_dotenv()
@@ -35,8 +36,6 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 # ------------Login Credentials-------------
-username = os.getenv('APP_SECRET_USERNAME')
-password = os.getenv('APP_SECRET_PASSWORD')
 app.secret_key = os.getenv('APP_SECRET_KEY')
 
 # --------Email Configuration------------
@@ -59,7 +58,7 @@ def login_required(f):
 
 @app.route('/logout')
 def logout():
-    session.pop('logged_in', None)
+    session.clear()
     return redirect(url_for('login'))
 
 
@@ -433,25 +432,66 @@ def exportar_emails():
         return redirect(url_for('index'))
 
 
+@app.route('/admin/users', methods=['GET', 'POST'])
+@login_required
+def manage_users():
+    if not session.get('is_admin'):
+        return redirect(url_for('index'))
+
+    mensagem = None
+
+    # Handle user creation
+    if request.method == 'POST' and 'create_user' in request.form:
+        username = request.form['username']
+        password = request.form['password']
+        is_admin = bool(int(request.form.get('is_admin', 0)))
+        password_hash = password  # store as plain text
+        try:
+            supabase.table("usuarios").insert({
+                "username": username,
+                "password_hash": password_hash,
+                "is_admin": is_admin
+            }).execute()
+            mensagem = "Usuário criado com sucesso!"
+        except Exception as e:
+            mensagem = f"Erro ao criar usuário: {e}"
+
+    # Handle user deletion
+    if request.method == 'POST' and 'delete_user' in request.form:
+        user_id = int(request.form['delete_user'])
+        try:
+            supabase.table("usuarios").delete().eq("id", user_id).execute()
+            mensagem = "Usuário removido com sucesso!"
+        except Exception as e:
+            mensagem = f"Erro ao remover usuário: {e}"
+
+    users = supabase.table("usuarios").select("*").execute().data
+    return render_template("admin_users.html", users=users, mensagem=mensagem)
+
+#def open_browser():
+ #   webbrowser.open_new_tab("http://127.0.0.1:5000")
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        entered_username = request.form['username']
-        entered_password = request.form['password']
-        if entered_username == username and entered_password == password:
+        entered_username = request.form.get('username', '').strip()
+        entered_password = request.form.get('password', '')
+        if not entered_username or not entered_password:
+            flash('Por favor, preencha todos os campos.', 'danger')
+            return render_template('login.html')
+
+        user_data = supabase.table("usuarios").select("*").eq("username", entered_username).execute().data
+        if user_data and user_data[0]['password_hash'] == entered_password:
             session['logged_in'] = True
             session['username'] = entered_username
+            session['is_admin'] = bool(user_data[0]['is_admin'])
             return redirect(url_for('index'))
         else:
             logger.info('Invalid credentials')
-    # This line ensures a response is always returned
+            flash('Usuário ou senha inválidos', 'danger')
     return render_template('login.html')
 
-
-def open_browser():
-    webbrowser.open_new_tab("http://127.0.0.1:5000")
-
-
 if __name__ == '__main__':
-    Timer(3, open_browser).start()
+    #Timer(3, open_browser).start()
     app.run(debug=True)

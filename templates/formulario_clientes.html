@@ -30,18 +30,23 @@
 <div class="container mt-5">
     <div class="d-flex justify-content-start gap-3 mb-4">
 
-        <a href="{{ url_for('exportar_emails') }}" class="btn btn-success">
-            Exportar para Excel
-        </a>
-
-
         <form id="enviar-todos-form" action="{{ url_for('enviar_manual_todos') }}" method="POST">
             <button type="submit" class="btn btn-success">
                 Enviar email para todos
             </button>
         </form>
-    </div>
 
+        {% if session.get('is_admin') %}
+            <a href="{{ url_for('exportar_emails') }}" class="btn btn-success">
+            Exportar para Excel
+        </a>
+
+            <a href="{{ url_for('manage_users') }}" class="btn btn-success">
+                Gerir Utilizadores
+            </a>
+        {% endif %}
+
+    </div>
 
     <h2 class="text-center mb-4">Cadastro de Cliente</h2>
 
