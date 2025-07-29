@@ -157,6 +157,12 @@ def index():
         if existing_client.data:
             mensagem = f"Email {email} already registered"
         else:
+            desconto_str = request.form.get('desconto', '')
+            try:
+                desconto = float(desconto_str)
+            except (ValueError, TypeError):
+                desconto = 0.0
+
             supabase.table("clientes").insert({
                 "adicionado_por": session.get('username', 'desconhecido'),
                 "nome": request.form['nome'],
@@ -164,7 +170,7 @@ def index():
                 "email": email,
                 "data_mergulho": request.form['data_mergulho'],
                 "valor_fatura": float(request.form['valor_fatura']),
-                "desconto": float(request.form.get('desconto', 0)),
+                "desconto": desconto,
                 "nacionalidade": request.form.get('nacionalidade', 'portugues'),
                 "primeiro_email_enviado": False,
                 "segundo_email_enviado": False,
