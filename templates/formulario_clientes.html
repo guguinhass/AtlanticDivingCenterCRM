@@ -23,29 +23,34 @@
         .highlight {
             background-color: rgba(40, 167, 69, 0.2);
         }
+
+        .iva-fade {
+            opacity: 0;
+            width: 0;
+            transition: opacity 0.5s, width 0.5s;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+        }
+        .iva-fade.show {
+            opacity: 1 !important;
+            width: 320px !important; /* Adjust as needed */
+            margin-left: 0.5rem;
+        }
     </style>
 </head>
 <body class="bg-light">
 
 <div class="container mt-5">
     <div class="d-flex justify-content-start gap-3 mb-4">
-
-        <form id="enviar-todos-form" action="{{ url_for('enviar_manual_todos') }}" method="POST">
-            <button type="submit" class="btn btn-success">
-                Enviar email para todos
-            </button>
+        <form id="enviar-todos-form" action="{{ url_for('enviar_manual_todos') }}" method="POST" class="m-0">
+            <button type="submit" class="btn btn-success">Enviar email para todos</button>
         </form>
 
         {% if session.get('is_admin') %}
-            <a href="{{ url_for('exportar_emails') }}" class="btn btn-success">
-            Exportar para Excel
-        </a>
-
-            <a href="{{ url_for('manage_users') }}" class="btn btn-success">
-                Gerir Utilizadores
-            </a>
+            <a href="{{ url_for('exportar_emails') }}" class="btn btn-success">Exportar para Excel</a>
+            <a href="{{ url_for('manage_users') }}" class="btn btn-success">Gerir Utilizadores</a>
         {% endif %}
-
     </div>
 
     <h2 class="text-center mb-4">Cadastro de Cliente</h2>
@@ -81,7 +86,13 @@
                 <input type="number" step="0.01" name="valor_fatura_base" id="valor_fatura_base" class="form-control" required min="0" placeholder="Valor sem IVA">
                 <span class="input-group-text">€</span>
             </div>
-            <div class="form-text">Com IVA (22%): <span id="valor_com_iva" class="fw-bold">0.00</span> €</div>
+            <div class="form-text">Com IVA: <span id="valor_com_iva" class="fw-bold">0.00</span> €</div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">IVA:</label>
+            <input type="number" name="iva" id="iva" class="form-control" min="0" max="1" step="0.01" value="0.22" required>
+            <div class="form-text">IVA a ser aplicado para este cliente (ex: 0.22 para 22%)</div>
         </div>
 
         <div class="mb-3">
@@ -90,13 +101,13 @@
                 <input type="number" step="0.01" name="valor_fatura" id="valor_fatura" class="form-control" required min="0" placeholder="Valor final a ser salvo">
                 <span class="input-group-text">€</span>
             </div>
-            <div class="form-text">Este valor será salvo na tabela.</div>
+            <div class="form-text">Este valor será salvo na tabela. O desconto será aplicado sobre este valor.</div>
         </div>
 
         <div class="mb-3">
             <label class="form-label">Desconto (%):</label>
             <input type="number" name="desconto" id="desconto" class="form-control" min="0" max="100" step="0.01" placeholder="0">
-            <div class="form-text">Opcional. Percentual de desconto a ser aplicado ao valor com IVA.</div>
+            <div class="form-text">Opcional. Percentual de desconto a ser aplicado ao valor final acima.</div>
         </div>
 
         <div class="mb-3">
@@ -125,6 +136,38 @@
     </form>
 
     <h2 class="text-center mt-5 mb-4">Clientes Cadastrados</h2>
+    <button type="button" class="btn btn-primary" onclick="toggleFilterPanel()">Filtrar por Mês</button>
+    <p></p>
+    <!-- Month Filter -->
+
+    <div id="filterPanel" class="row mb-3" style="display: none;">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <label for="monthFilter" class="form-label mb-0">Filtrar por mês:</label>
+                        <select id="monthFilter" class="form-select" style="width: auto;">
+                            <option value="">Todos os meses</option>
+                            <option value="01">Janeiro</option>
+                            <option value="02">Fevereiro</option>
+                            <option value="03">Março</option>
+                            <option value="04">Abril</option>
+                            <option value="05">Maio</option>
+                            <option value="06">Junho</option>
+                            <option value="07">Julho</option>
+                            <option value="08">Agosto</option>
+                            <option value="09">Setembro</option>
+                            <option value="10">Outubro</option>
+                            <option value="11">Novembro</option>
+                            <option value="12">Dezembro</option>
+                        </select>
+                        <button type="button" class="btn btn-primary" onclick="filterByMonth()">Filtrar</button>
+                        <button type="button" class="btn btn-secondary" onclick="clearFilter()">Limpar Filtro</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="table-responsive">
         <table class="table table-bordered table-striped table-hover">
@@ -136,6 +179,7 @@
                 <th>Nº Mergulhos</th>
                 <th>Data Mergulho</th>
                 <th>Valor   (€)</th>
+                <th>IVA</th>
                 <th>Desconto (%)</th>
                 <th>Nacionalidade</th>
                 <th>1º Email</th>
@@ -153,8 +197,9 @@
                     <td>{{ cliente.num_mergulho }}</td>
                     <td>{{ cliente.formatted_date }}</td>
                     <td>{{ "%.2f"|format(cliente.valor_fatura) }} €
-                        {% if cliente.desconto and cliente.desconto > 0 %}<br><span class="text-success">(com desconto: {{ "%.2f"|format(cliente.valor_fatura * (1 - cliente.desconto / 100)) }} €)</span>{% endif %}
+                        {% if cliente.desconto and cliente.desconto > 0 %}{% endif %}
                     </td>
+                    <td>{{ "%.0f"|format(cliente.iva * 100)}}% </td>
                     <td>{% if cliente.desconto %}{{ cliente.desconto }}%{% else %}0.0{% endif %}</td>
                     <td>{{ cliente.nacionalidade.capitalize() }}</td>
                     <td>{{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}</td>
@@ -162,7 +207,7 @@
                     <td>{{ 'Sim' if cliente.email_manual_enviado else 'Não' }}</td>
                     <td class="d-flex gap-2">
                         <button type="button" class="btn btn-sm btn-success"
-                                
+
                                 data-email="{{ cliente.email }}"
                                 data-nome="{{ cliente.nome }}"
                                 data-nacionalidade="{{ cliente.nacionalidade }}"
@@ -177,7 +222,7 @@
                 </tr>
             {% else %}
                 <tr>
-                    <td colspan="11" class="text-center">Nenhum cliente cadastrado</td>
+                    <td colspan="12" class="text-center">Nenhum cliente cadastrado</td>
                 </tr>
             {% endfor %}
             </tbody>
@@ -237,6 +282,12 @@
             .then(html => {
                 document.querySelector('tbody').innerHTML = html;
                 configurarEventosForms();
+
+                // Re-apply current filter if one is active
+                var selectedMonth = document.getElementById('monthFilter').value;
+                if (selectedMonth && selectedMonth !== '') {
+                    filterByMonth();
+                }
             })
             .catch(error => {
                 console.error('Erro:', error);
@@ -287,9 +338,8 @@
     }
 
 
-    setInterval(atualizarTabela, 10000);
+    setInterval(atualizarTabela, 30000); // Reduced from 10 seconds to 30 seconds
 
-    var quill;
     document.addEventListener('DOMContentLoaded', function () {
         configurarEventosForms();
         atualizarTabela();
@@ -304,23 +354,45 @@
         }
         // IVA calculation logic
         var baseInput = document.getElementById('valor_fatura_base');
+        var ivaInput = document.getElementById('iva');
         var ivaSpan = document.getElementById('valor_com_iva');
         var finalInput = document.getElementById('valor_fatura');
         var descontoInput = document.getElementById('desconto');
+        var originalFinalValue = 0; // Store the original final value
+
         function updateIVA() {
             var base = parseFloat(baseInput.value) || 0;
-            var comIva = (base * 1.22).toFixed(2);
+            var iva = parseFloat(ivaInput.value) || 0.22;
+            var comIva = (base * (1 + iva)).toFixed(2);
             ivaSpan.textContent = comIva;
+
+            // Get the current final value (either from user input or calculated)
+            var currentFinalValue = parseFloat(finalInput.value) || parseFloat(comIva);
             var desconto = parseFloat(descontoInput.value) || 0;
-            var valorFinal = comIva;
+
+            // If this is the first time or the base/IVA changed, update the original value
+            if (originalFinalValue === 0 || baseInput.value !== baseInput.dataset.lastBase || ivaInput.value !== ivaInput.dataset.lastIva) {
+                originalFinalValue = currentFinalValue;
+                baseInput.dataset.lastBase = baseInput.value;
+                ivaInput.dataset.lastIva = ivaInput.value;
+            }
+
+            // Apply discount to the original final value
+            var valorFinal = originalFinalValue;
             if (desconto > 0 && desconto < 100) {
-                valorFinal = (comIva * (1 - desconto / 100)).toFixed(2);
+                valorFinal = (originalFinalValue * (1 - desconto / 100)).toFixed(2);
             }
             finalInput.value = valorFinal;
         }
+
         baseInput.addEventListener('input', updateIVA);
+        ivaInput.addEventListener('input', updateIVA);
         descontoInput.addEventListener('input', updateIVA);
-        // Initialize on load
+        finalInput.addEventListener('input', function() {
+            // When user manually changes the final value, update the original value
+            originalFinalValue = parseFloat(finalInput.value) || 0;
+            updateIVA();
+        });
         updateIVA();
         // Initialize Quill
         quill = new Quill('#quillEditor', {
@@ -388,6 +460,70 @@
             btn.getAttribute('data-nacionalidade')
         );
     }
+
+    // Month filter functions
+    function toggleFilterPanel() {
+        var filterPanel = document.getElementById('filterPanel');
+        if (filterPanel.style.display === 'none') {
+            filterPanel.style.display = 'block';
+        } else {
+            filterPanel.style.display = 'none';
+        }
+    }
+
+    function filterByMonth() {
+        var selectedMonth = document.getElementById('monthFilter').value;
+        var tableRows = document.querySelectorAll('tbody tr');
+
+        tableRows.forEach(function(row) {
+            var dateCell = row.querySelector('td:nth-child(5)'); // Date column
+            if (dateCell) {
+                var dateText = dateCell.textContent.trim();
+                // Parse date in dd/mm/yyyy format
+                var dateParts = dateText.split('/');
+                if (dateParts.length === 3) {
+                    var day = parseInt(dateParts[0]);
+                    var month = parseInt(dateParts[1]);
+                    var year = parseInt(dateParts[2]);
+                    var rowMonth = month.toString().padStart(2, '0');
+
+                    if (selectedMonth === '' || rowMonth === selectedMonth) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            }
+        });
+
+        // Update row count
+        updateRowCount();
+    }
+
+    function clearFilter() {
+        document.getElementById('monthFilter').value = '';
+        var tableRows = document.querySelectorAll('tbody tr');
+        tableRows.forEach(function(row) {
+            row.style.display = '';
+        });
+        updateRowCount();
+    }
+
+    function updateRowCount() {
+        var visibleRows = document.querySelectorAll('tbody tr:not([style*="display: none"])').length;
+        var totalRows = document.querySelectorAll('tbody tr').length;
+
+        // You can add a counter display here if needed
+        console.log('Visible rows: ' + visibleRows + ' of ' + totalRows);
+    }
+
+    // Auto-filter when month is selected
+    document.addEventListener('DOMContentLoaded', function() {
+        var monthFilter = document.getElementById('monthFilter');
+        if (monthFilter) {
+            monthFilter.addEventListener('change', filterByMonth);
+        }
+    });
 </script>
 </body>
 </html>

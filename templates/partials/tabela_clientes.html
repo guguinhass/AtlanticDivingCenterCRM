@@ -1,35 +1,36 @@
 {% for cliente in clientes %}
-<tr>
-    <td>{{ cliente.adicionado_por if cliente.adicionado_por else 'Desconhecido' }}</td>
-    <td>{{ cliente.nome }}</td>
-    <td>{{ cliente.email }}</td>
-    <td>{{ cliente.num_mergulho }}</td>
-    <td>{{ cliente.formatted_date }}</td>
-    <td>{{ "%.2f"|format(cliente.valor_fatura) }} €</td>
-    <td>{% if cliente.desconto %}{{ cliente.desconto }}%{% else %}-{% endif %}</td>
-    <td>{{ cliente.nacionalidade.capitalize() }}</td>
-    <td class="{{ 'text-success' if cliente.primeiro_email_enviado else 'text-danger' }}">
-        {{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}
-    </td>
-    <td class="{{ 'text-success' if cliente.segundo_email_enviado else 'text-danger' }}">
-        {{ 'Sim' if cliente.segundo_email_enviado else 'Não' }}
-    </td>
-    <td class="{{ 'text-success' if cliente.email_manual_enviado else 'text-danger' }}">
-        {{ 'Sim' if cliente.email_manual_enviado else 'Não' }}
-    </td>
-    <td class="d-flex gap-2">
-        <button type="button" class="btn btn-sm btn-success"
-            
-            data-email="{{ cliente.email }}"
-            data-nome="{{ cliente.nome }}"
-            data-nacionalidade="{{ cliente.nacionalidade }}"
-            onclick="openEmailModalFromButton(this)">
-            Enviar Email
-        </button>
-        <form action="{{ url_for('remover_cliente', email=cliente.email) }}" method="post"
-              onsubmit="return confirm('Tem certeza que deseja remover {{ cliente.nome }}?');">
-            <button type="submit" class="btn btn-sm btn-danger">Remover Cliente</button>
-        </form>
-    </td>
-</tr>
+    <tr>
+        <td>{{ cliente.adicionado_por if cliente.adicionado_por else 'Desconhecido' }}</td>
+        <td>{{ cliente.nome }}</td>
+        <td>{{ cliente.email }}</td>
+        <td>{{ cliente.num_mergulho }}</td>
+        <td>{{ cliente.formatted_date }}</td>
+        <td>{{ "%.2f"|format(cliente.valor_fatura) }} €
+            {% if cliente.desconto and cliente.desconto > 0 %}{% endif %}
+        </td>
+        <td>{{ "%.0f"|format(cliente.iva * 100)}}% </td>
+        <td>{% if cliente.desconto %}{{ cliente.desconto }}%{% else %}0.0{% endif %}</td>
+        <td>{{ cliente.nacionalidade.capitalize() }}</td>
+        <td>{{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}</td>
+        <td>{{ 'Sim' if cliente.segundo_email_enviado else 'Não' }}</td>
+        <td>{{ 'Sim' if cliente.email_manual_enviado else 'Não' }}</td>
+        <td class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-success"
+                    
+                    data-email="{{ cliente.email }}"
+                    data-nome="{{ cliente.nome }}"
+                    data-nacionalidade="{{ cliente.nacionalidade }}"
+                    onclick="openEmailModalFromButton(this)">
+                Enviar Email
+            </button>
+            <form action="{{ url_for('remover_cliente', email=cliente.email) }}" method="post"
+                  onsubmit="return confirm('Tem certeza que deseja remover {{ cliente.nome }}?');">
+                <button type="submit" class="btn btn-sm btn-danger">Remover Cliente</button>
+            </form>
+        </td>
+    </tr>
+{% else %}
+    <tr>
+        <td colspan="13" class="text-center">Nenhum cliente cadastrado</td>
+    </tr>
 {% endfor %}

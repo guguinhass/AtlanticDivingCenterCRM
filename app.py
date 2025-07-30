@@ -170,6 +170,7 @@ def index():
                 "data_mergulho": request.form['data_mergulho'],
                 "valor_fatura": float(request.form['valor_fatura']),
                 "desconto": desconto,
+                "iva": float(request.form.get('iva', 0.22)),
                 "nacionalidade": request.form.get('nacionalidade', 'portugues'),
                 "primeiro_email_enviado": False,
                 "segundo_email_enviado": False,
@@ -384,8 +385,8 @@ def exportar_emails():
             '1º Email Enviado': 'Sim' if cliente["primeiro_email_enviado"] else 'Não',
             '2º Email Enviado': 'Sim' if cliente["segundo_email_enviado"] else 'Não',
             'Email Manual': 'Sim' if cliente["email_manual_enviado"] else 'Não',
-            'Valor da fatura(€)': cliente["valor_fatura"],
-            'Fatura com Iva': cliente["valor_fatura"] * 1.22,
+            'Valor(€)': cliente["valor_fatura"],
+            'Valor com Iva': cliente["valor_fatura"] * 1.22,
             'IVA': cliente["valor_fatura"] * 0.22,
             'Desconto': cliente["desconto"]
         } for cliente in clientes]
@@ -445,7 +446,7 @@ def manage_users():
         username = request.form['username']
         password = request.form['password']
         is_admin = bool(int(request.form.get('is_admin', 0)))
-        password_hash = password  # store as plain text
+        password_hash = password
         try:
             supabase.table("usuarios").insert({
                 "username": username,
@@ -491,6 +492,13 @@ def login():
             logger.info('Invalid credentials')
             flash('Usuário ou senha inválidos', 'danger')
     return render_template('login.html')
+
+@app.route('/set-iva', methods=['POST'])
+@login_required
+def set_iva():
+    new_iva = request.json.get('iva')
+    supabase.table("configuracoes").upsert({"chave": "iva", "valor": str(new_iva)}).execute()
+    return {'success': True}
 
 if __name__ == '__main__':
     #Timer(3, open_browser).start()
