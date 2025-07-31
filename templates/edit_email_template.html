@@ -1,0 +1,295 @@
+<!doctype html>
+<html>
+<head>
+    <title>Editar Template de Email - CRM Atlantic Diving Center</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Editar Template de Email - {{ editing_template.capitalize() }}</h2>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Voltar</a>
+    </div>
+    
+    <div class="alert alert-info mb-4">
+        <strong>Informação:</strong>.
+        Você pode editá-las e salvar como templates personalizadas, ou usar o botão "Reset para Padrão"
+        para voltar às templates originais.
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="post">
+        <div class="row">
+            <!-- Portuguese Template -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Template Português</h5>
+                        <span class="badge bg-info" id="portuguesStatus">Padrão</span>
+                    </div>
+                                         <div class="card-body">
+                         <div id="portuguesEditor" style="height: 300px;"></div>
+                         <input type="hidden" name="portugues_content" id="portuguesContent">
+                         <script type="text/template" id="portuguesTemplate">{{ template_content['português'] | safe }}</script>
+                     </div>
+                </div>
+            </div>
+
+            <!-- English Template -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Template Inglês</h5>
+                        <span class="badge bg-info" id="inglesStatus">Padrão</span>
+                    </div>
+                                         <div class="card-body">
+                         <div id="inglesEditor" style="height: 300px;"></div>
+                         <input type="hidden" name="ingles_content" id="inglesContent">
+                         <script type="text/template" id="inglesTemplate">{{ template_content['inglês'] | safe }}</script>
+                     </div>
+                </div>
+            </div>
+
+            <!-- French Template -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Template Francês</h5>
+                        <span class="badge bg-info" id="francesStatus">Padrão</span>
+                    </div>
+                                         <div class="card-body">
+                         <div id="francesEditor" style="height: 300px;"></div>
+                         <input type="hidden" name="frances_content" id="francesContent">
+                         <script type="text/template" id="francesTemplate">{{ template_content['francês'] | safe }}</script>
+                     </div>
+                </div>
+            </div>
+
+            <!-- German Template -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Template Alemão</h5>
+                        <span class="badge bg-info" id="alemaoStatus">Padrão</span>
+                    </div>
+                                         <div class="card-body">
+                         <div id="alemaoEditor" style="height: 300px;"></div>
+                         <input type="hidden" name="alemao_content" id="alemaoContent">
+                         <script type="text/template" id="alemaoTemplate">{{ template_content['alemão'] | safe }}</script>
+                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-primary btn-lg" onclick="saveCustomTemplates()">Salvar Templates Personalizadas</button>
+            <button type="submit" class="btn btn-warning btn-lg ms-2" onclick="resetToDefaults()">Reset para Padrão</button>
+            <button type="button" class="btn btn-danger btn-lg ms-2" onclick="clearAllTemplates()">Limpar Todas as Templates</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary btn-lg ms-2">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Initialize Quill editors
+    var portuguesQuill = new Quill('#portuguesEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+
+    var inglesQuill = new Quill('#inglesEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+
+    var francesQuill = new Quill('#francesEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+
+    var alemaoQuill = new Quill('#alemaoEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+
+    // Load existing content
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOMContentLoaded fired');
+        console.log('Quill editors initialized:', {
+            'portuguesQuill': typeof portuguesQuill,
+            'inglesQuill': typeof inglesQuill,
+            'francesQuill': typeof francesQuill,
+            'alemaoQuill': typeof alemaoQuill
+        });
+        
+        // Get content from template scripts
+        var portuguesContent = document.getElementById('portuguesTemplate').innerHTML;
+        var inglesContent = document.getElementById('inglesTemplate').innerHTML;
+        var francesContent = document.getElementById('francesTemplate').innerHTML;
+        var alemaoContent = document.getElementById('alemaoTemplate').innerHTML;
+        
+        console.log('Template content loaded:', {
+            'português': portuguesContent.length + ' chars',
+            'inglês': inglesContent.length + ' chars',
+            'francês': francesContent.length + ' chars',
+            'alemão': alemaoContent.length + ' chars'
+        });
+        
+        console.log('Portuguese content preview:', portuguesContent.substring(0, 200));
+        console.log('English content preview:', inglesContent.substring(0, 200));
+        console.log('Raw Portuguese template element:', document.getElementById('portuguesTemplate').outerHTML);
+        
+        // Set content in editors using Quill's proper API
+        if (portuguesContent && portuguesContent.trim()) {
+            console.log('Setting Portuguese content in editor, length:', portuguesContent.length);
+            console.log('Portuguese content preview:', portuguesContent.substring(0, 100));
+            try {
+                portuguesQuill.clipboard.dangerouslyPasteHTML(portuguesContent);
+                console.log('Portuguese content set in editor successfully');
+            } catch (error) {
+                console.error('Error setting Portuguese content:', error);
+            }
+        } else {
+            console.log('Portuguese content is empty or null');
+        }
+        
+        if (inglesContent && inglesContent.trim()) {
+            try {
+                inglesQuill.clipboard.dangerouslyPasteHTML(inglesContent);
+                console.log('English content set in editor');
+            } catch (error) {
+                console.error('Error setting English content:', error);
+            }
+        } else {
+            console.log('English content is empty or null');
+        }
+        
+        if (francesContent && francesContent.trim()) {
+            try {
+                francesQuill.clipboard.dangerouslyPasteHTML(francesContent);
+                console.log('French content set in editor');
+            } catch (error) {
+                console.error('Error setting French content:', error);
+            }
+        } else {
+            console.log('French content is empty or null');
+        }
+        
+        if (alemaoContent && alemaoContent.trim()) {
+            try {
+                alemaoQuill.clipboard.dangerouslyPasteHTML(alemaoContent);
+                console.log('German content set in editor');
+            } catch (error) {
+                console.error('Error setting German content:', error);
+            }
+        } else {
+            console.log('German content is empty or null');
+        }
+        
+        // Update status badges - all are default since we load from files
+        updateStatusBadge('portuguesStatus', 'default');
+        updateStatusBadge('inglesStatus', 'default');
+        updateStatusBadge('francesStatus', 'default');
+        updateStatusBadge('alemaoStatus', 'default');
+    });
+    
+    function updateStatusBadge(elementId, status) {
+        var badge = document.getElementById(elementId);
+        if (status === 'custom') {
+            badge.textContent = 'Personalizado';
+            badge.className = 'badge bg-success';
+        } else {
+            badge.textContent = 'Padrão';
+            badge.className = 'badge bg-info';
+        }
+    }
+    
+    function saveCustomTemplates() {
+        // Set flag to save custom templates
+        var saveCustomInput = document.createElement('input');
+        saveCustomInput.type = 'hidden';
+        saveCustomInput.name = 'save_custom';
+        saveCustomInput.value = 'true';
+        document.querySelector('form').appendChild(saveCustomInput);
+    }
+    
+    function resetToDefaults() {
+        if (confirm('Tem certeza que deseja resetar todos os templates para os padrões? Isso irá remover todos os templates personalizados da base de dados.')) {
+            // Set flag to reset to defaults
+            var saveCustomInput = document.createElement('input');
+            saveCustomInput.type = 'hidden';
+            saveCustomInput.name = 'save_custom';
+            saveCustomInput.value = 'false';
+            document.querySelector('form').appendChild(saveCustomInput);
+        } else {
+            // Prevent form submission
+            event.preventDefault();
+        }
+    }
+    
+    function clearAllTemplates() {
+        if (confirm('Tem certeza que deseja limpar TODOS os templates personalizados da base de dados? Esta ação não pode ser desfeita.')) {
+            // Create a form to submit the clear request
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ url_for("clear_email_templates") }}';
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    // Update hidden inputs before form submission
+    document.querySelector('form').addEventListener('submit', function() {
+        document.getElementById('portuguesContent').value = portuguesQuill.root.innerHTML;
+        document.getElementById('inglesContent').value = inglesQuill.root.innerHTML;
+        document.getElementById('francesContent').value = francesQuill.root.innerHTML;
+        document.getElementById('alemaoContent').value = alemaoQuill.root.innerHTML;
+    });
+</script>
+
+</body>
+</html>

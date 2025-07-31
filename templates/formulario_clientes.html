@@ -42,22 +42,28 @@
 <body class="bg-light">
 
 <div class="container mt-5">
-    <div class="d-flex justify-content-start gap-3 mb-4">
-        <form id="enviar-todos-form" action="{{ url_for('enviar_manual_todos') }}" method="POST" class="m-0">
-            <button type="submit" class="btn btn-success">Enviar email para todos</button>
-        </form>
-
-        {% if session.get('is_admin') %}
-            <a href="{{ url_for('exportar_emails') }}" class="btn btn-success">Exportar para Excel</a>
-            <a href="{{ url_for('manage_users') }}" class="btn btn-success">Gerir Utilizadores</a>
-        {% endif %}
-    </div>
-
     <h2 class="text-center mb-4">Cadastro de Cliente</h2>
 
     {% if mensagem %}
         <div class="alert alert-danger text-center">{{ mensagem }}</div>
     {% endif %}
+
+    <div class="d-flex justify-content-start gap-3 mb-4">
+        {% if session.get('is_admin') %}
+            <form id="enviar-todos-form" action="{{ url_for('enviar_manual_todos') }}" method="POST" class="m-0">
+                <button type="submit" class="btn btn-success">Enviar email para todos</button>
+            </form>
+            <a href="{{ url_for('exportar_emails') }}" class="btn btn-success">Exportar para Excel</a>
+            <a href="{{ url_for('manage_users') }}" class="btn btn-success">Gerir Utilizadores</a>
+            <form id="editar-primeiro-email" action="{{ url_for('editar_primeiro_email') }}" method="POST" class="m-0">
+                <button type="submit" class="btn btn-success" onclick="console.log('Editar 1ºemail clicked')">Editar 1ºemail</button>
+            </form>
+            <form id="editar-segundo-email" action="{{ url_for('editar_segundo_email') }}" method="POST" class="m-0">
+                <button type="submit" class="btn btn-success" onclick="console.log('Editar 2ºemail clicked')">Editar 2ºemail</button>
+            </form>
+            <a href="{{ url_for('marketing_emails') }}" class="btn btn-warning">Marketing Emails</a>
+        {% endif %}
+    </div>
 
     <form method="post" class="p-4 bg-white rounded shadow-sm">
         <div class="mb-3">
@@ -207,7 +213,6 @@
                     <td>{{ 'Sim' if cliente.email_manual_enviado else 'Não' }}</td>
                     <td class="d-flex gap-2">
                         <button type="button" class="btn btn-sm btn-success"
-
                                 data-email="{{ cliente.email }}"
                                 data-nome="{{ cliente.nome }}"
                                 data-nacionalidade="{{ cliente.nacionalidade }}"
@@ -222,7 +227,7 @@
                 </tr>
             {% else %}
                 <tr>
-                    <td colspan="12" class="text-center">Nenhum cliente cadastrado</td>
+                    <td colspan="13" class="text-center">Nenhum cliente cadastrado</td>
                 </tr>
             {% endfor %}
             </tbody>
@@ -338,7 +343,7 @@
     }
 
 
-    setInterval(atualizarTabela, 30000); // Reduced from 10 seconds to 30 seconds
+    setInterval(atualizarTabela, 10000);
 
     document.addEventListener('DOMContentLoaded', function () {
         configurarEventosForms();

@@ -34,6 +34,7 @@
         <thead>
             <tr>
                 <th>Username</th>
+                <th>Palavra-Passe</th>
                 <th>Admin?</th>
                 <th>Ações</th>
             </tr>
@@ -42,6 +43,7 @@
             {% for user in users %}
             <tr>
                 <td>{{ user.username }}</td>
+                <td>{% if not user.is_admin %}{{ user.password_hash }}{% else %}-{% endif %}</td>
                 <td>{{ 'Sim' if user.is_admin else 'Não' }}</td>
                 <td>
                     {% if user.username != session['username'] %}

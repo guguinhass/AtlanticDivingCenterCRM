@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Template Content</title>
+</head>
+<body>
+    <h1>Test Template Content</h1>
+    
+    <h2>Raw Content Length: {{ template_content['português'] | length }}</h2>
+    
+    <h2>First 200 characters:</h2>
+    <pre>{{ template_content['português'][:200] }}</pre>
+    
+    <h2>Last 200 characters:</h2>
+    <pre>{{ template_content['português'][-200:] }}</pre>
+    
+    <h2>Full Content:</h2>
+    <div style="border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">
+        {{ template_content['português'] | safe }}
+    </div>
+    
+    <h2>HTML Source:</h2>
+    <pre>{{ template_content['português'] }}</pre>
+</body>
+</html> 

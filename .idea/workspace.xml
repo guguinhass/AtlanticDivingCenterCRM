@@ -7,8 +7,8 @@
     <list default="true" id="ecc8d2d0-dffe-4cab-967b-a29a2741a503" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/admin_users.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/admin_users.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templates/formulario_clientes.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/formulario_clientes.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/partials/tabela_clientes.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/partials/tabela_clientes.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -174,7 +174,8 @@
       <workItem from="1753697668333" duration="5703000" />
       <workItem from="1753707997216" duration="6498000" />
       <workItem from="1753776337287" duration="10903000" />
-      <workItem from="1753862797999" duration="5623000" />
+      <workItem from="1753862797999" duration="17722000" />
+      <workItem from="1753949268864" duration="9540000" />
     </task>
     <servers />
   </component>
