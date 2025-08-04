@@ -161,7 +161,7 @@ def check_and_send_emails():
             data_mergulho = datetime.strptime(current_cliente['data_mergulho'], '%Y-%m-%d').date()
             dias_passados = (hoje - data_mergulho).days
 
-            if dias_passados == 1 and not current_cliente['primeiro_email_enviado']:
+            if dias_passados >= 1 and not current_cliente['primeiro_email_enviado']:
                 logger.info(f"SCHEDULED: Sending first email to {current_cliente['email']} (day {dias_passados})")
                 if email_feedback(current_cliente, 'primeiro'):
                     supabase.table("clientes").update(
@@ -169,7 +169,7 @@ def check_and_send_emails():
                     ).eq("email", current_cliente['email']).execute()
                     logger.info(f"SCHEDULED: First email sent successfully to {current_cliente['email']}")
 
-            elif dias_passados == 3 and not current_cliente['segundo_email_enviado']:
+            elif dias_passados >= 3 and not current_cliente['segundo_email_enviado']:
                 logger.info(f"SCHEDULED: Sending second email to {current_cliente['email']} (day {dias_passados})")
                 if email_feedback(current_cliente, 'segundo'):
                     supabase.table("clientes").update(
