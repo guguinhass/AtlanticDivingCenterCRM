@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    
+
     <meta charset="UTF-8">
     <title>Login | Atlantic Diving Center CRM</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,20 +15,23 @@
             align-items: center;
             justify-content: center;
         }
+
         .login-container {
             background: #fff;
             padding: 2.5rem 2rem;
             border-radius: 1rem;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.10);
             width: 100%;
             max-width: 350px;
         }
+
         .login-title {
             font-weight: 700;
             color: #0077b6;
             margin-bottom: 1.5rem;
             text-align: center;
         }
+
         .login-logo {
             display: block;
             margin-left: auto;
@@ -39,26 +42,26 @@
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <img src="{{ url_for('static', filename='LOGO_AZUL.png') }}" alt="Logo" class="login-logo mb-3">
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
+<div class="login-container">
+    <img src="{{ url_for('static', filename='LOGO_AZUL.png') }}" alt="Logo" class="login-logo mb-3">
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
             <div class="alert alert-danger" role="alert">
-              {% for message in messages %}
-                {{ message }}<br>
-              {% endfor %}
+                {% for message in messages %}
+                    {{ message }}<br>
+                {% endfor %}
             </div>
-          {% endif %}
-        {% endwith %}
-        <form method="post">
-            <div class="mb-3">
-                <input type="text" class="form-control" name="username" placeholder="Username" required autofocus>
-            </div>
-            <div class="mb-3">
-                <input type="password" class="form-control" name="password" placeholder="Password" required>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Login</button>
-        </form>
-    </div>
+        {% endif %}
+    {% endwith %}
+    <form method="post">
+        <div class="mb-3">
+            <input type="text" class="form-control" name="username" placeholder="Username" required autofocus>
+        </div>
+        <div class="mb-3">
+            <input type="password" class="form-control" name="password" placeholder="Password" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Login</button>
+    </form>
+</div>
 </body>
 </html>

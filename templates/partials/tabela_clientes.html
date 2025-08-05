@@ -8,7 +8,7 @@
         <td>{{ "%.2f"|format(cliente.valor_fatura) }} €
             {% if cliente.desconto and cliente.desconto > 0 %}{% endif %}
         </td>
-        <td>{{ "%.0f"|format(cliente.iva * 100)}}% </td>
+        <td>{{ "%.0f"|format(cliente.iva * 100) }}%</td>
         <td>{% if cliente.desconto %}{{ cliente.desconto }}%{% else %}0.0{% endif %}</td>
         <td>{{ cliente.nacionalidade.capitalize() }}</td>
         <td>{{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}</td>
@@ -16,7 +16,7 @@
         <td>{{ 'Sim' if cliente.email_manual_enviado else 'Não' }}</td>
         <td class="d-flex gap-2">
             <button type="button" class="btn btn-sm btn-success"
-                    
+
                     data-email="{{ cliente.email }}"
                     data-nome="{{ cliente.nome }}"
                     data-nacionalidade="{{ cliente.nacionalidade }}"

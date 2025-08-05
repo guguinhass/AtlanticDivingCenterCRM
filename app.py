@@ -17,7 +17,6 @@ from functools import wraps
 from openpyxl.styles import Alignment
 from werkzeug.security import generate_password_hash, check_password_hash
 
-
 # --------Load Environment Variables-------
 load_dotenv()
 
@@ -39,7 +38,7 @@ app = Flask(__name__)
 # ------------Login Credentials-------------
 app.secret_key = os.getenv('APP_SECRET_KEY')
 
-#--------Initialize scheduler after Flask app is created--------
+# --------Initialize scheduler after Flask app is created--------
 if not app.debug and not os.environ.get('WERKZEUG_RUN_MAIN'):
     scheduler = BackgroundScheduler(daemon=True)
     scheduler.start()
@@ -54,6 +53,7 @@ app.config['SMTP_SERVER'] = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
 app.config['SMTP_PORT'] = int(os.getenv('SMTP_PORT', 465))
 app.config['SMTP_USERNAME'] = os.getenv('SMTP_USERNAME')
 app.config['SMTP_PASSWORD'] = os.getenv('SMTP_PASSWORD')
+
 
 # ---------Login/Logout Functions--------
 def login_required(f):
@@ -276,9 +276,6 @@ def debug_templates():
         }
     except Exception as e:
         return {'error': str(e)}
-
-
-
 
 
 @app.route('/clear-email-templates', methods=['POST'])
@@ -714,9 +711,6 @@ def preview_excel_columns():
         return {'error': f'Erro ao processar arquivo: {str(e)}'}, 500
 
 
-
-
-
 @app.route('/admin/users', methods=['GET', 'POST'])
 @login_required
 def manage_users():
@@ -753,7 +747,8 @@ def manage_users():
     users = supabase.table("usuarios").select("*").execute().data
     return render_template("admin_users.html", users=users, mensagem=mensagem)
 
-#----------Login-------------
+
+# ----------Login-------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -774,7 +769,8 @@ def login():
             flash('Usuário ou senha inválidos', 'danger')
     return render_template('login.html')
 
-#-------Iva setter--------
+
+# -------Iva setter--------
 @app.route('/set-iva', methods=['POST'])
 @login_required
 def set_iva():
@@ -839,7 +835,8 @@ def editar_primeiro_email():
         flash('Erro ao abrir editor de email', 'danger')
         return redirect(url_for('index'))
 
-#-----------Edit Second Email------------
+
+# -----------Edit Second Email------------
 @app.route('/editar-segundo-email', methods=['GET', 'POST'])
 @login_required
 def editar_segundo_email():
@@ -1127,7 +1124,7 @@ def marketing_emails():
     email_lists = []
     try:
         lists_response = supabase.table("marketing_email_lists").select("*").execute()
-        
+
         # Group emails by list name
         lists = {}
         for record in lists_response.data:
@@ -1135,7 +1132,7 @@ def marketing_emails():
             if list_name not in lists:
                 lists[list_name] = []
             lists[list_name].append(record['email'])
-        
+
         # Convert to format for frontend
         for list_name, emails in lists.items():
             email_lists.append({
@@ -1143,7 +1140,7 @@ def marketing_emails():
                 'email_count': len(emails),
                 'emails': emails
             })
-        
+
         logger.info(f"Loaded {len(email_lists)} marketing email lists from Supabase")
     except Exception as e:
         logger.error(f"Error loading marketing email lists: {str(e)}")
@@ -1173,9 +1170,6 @@ def clear_marketing_emails():
     return redirect(url_for('marketing_emails'))
 
 
-
-
-
 @app.route('/get-marketing-email-lists', methods=['GET'])
 @login_required
 def get_marketing_email_lists():
@@ -1185,7 +1179,7 @@ def get_marketing_email_lists():
 
     try:
         response = supabase.table("marketing_email_lists").select("*").execute()
-        
+
         # Group emails by list name
         lists = {}
         for record in response.data:
@@ -1193,7 +1187,7 @@ def get_marketing_email_lists():
             if list_name not in lists:
                 lists[list_name] = []
             lists[list_name].append(record['email'])
-        
+
         # Convert to format for frontend
         email_lists = []
         for list_name, emails in lists.items():
@@ -1202,9 +1196,9 @@ def get_marketing_email_lists():
                 'email_count': len(emails),
                 'emails': emails
             })
-        
+
         return {'lists': email_lists}
-        
+
     except Exception as e:
         logger.error(f"Error getting marketing email lists: {str(e)}")
         return {'error': f'Erro ao carregar listas: {str(e)}'}, 500
@@ -1224,10 +1218,10 @@ def delete_marketing_email_list():
 
         # Delete the list
         supabase.table("marketing_email_lists").delete().eq("list_name", list_name).execute()
-        
+
         logger.info(f"Deleted marketing email list: {list_name}")
         return {'success': True, 'message': f'Lista "{list_name}" removida com sucesso'}
-        
+
     except Exception as e:
         logger.error(f"Error deleting marketing email list: {str(e)}")
         return {'error': f'Erro ao remover lista: {str(e)}'}, 500
@@ -1244,7 +1238,7 @@ def marketing_email_editor():
     email_lists = []
     try:
         lists_response = supabase.table("marketing_email_lists").select("*").execute()
-        
+
         # Group emails by list name
         lists = {}
         for record in lists_response.data:
@@ -1252,7 +1246,7 @@ def marketing_email_editor():
             if list_name not in lists:
                 lists[list_name] = []
             lists[list_name].append(record['email'])
-        
+
         # Convert to format for frontend
         for list_name, emails in lists.items():
             email_lists.append({
@@ -1260,7 +1254,7 @@ def marketing_email_editor():
                 'email_count': len(emails),
                 'emails': emails
             })
-        
+
         logger.info(f"Loaded {len(email_lists)} marketing email lists for editor")
     except Exception as e:
         logger.error(f"Error loading marketing email lists for editor: {str(e)}")
@@ -1277,7 +1271,7 @@ def get_marketing_lists_api():
 
     try:
         response = supabase.table("marketing_email_lists").select("*").execute()
-        
+
         # Group emails by list name
         lists = {}
         for record in response.data:
@@ -1285,7 +1279,7 @@ def get_marketing_lists_api():
             if list_name not in lists:
                 lists[list_name] = []
             lists[list_name].append(record['email'])
-        
+
         # Convert to format for frontend
         email_lists = []
         for list_name, emails in lists.items():
@@ -1294,9 +1288,9 @@ def get_marketing_lists_api():
                 'email_count': len(emails),
                 'emails': emails
             })
-        
+
         return {'lists': email_lists}
-        
+
     except Exception as e:
         logger.error(f"Error getting marketing lists API: {str(e)}")
         return {'error': f'Erro ao carregar listas: {str(e)}'}, 500
@@ -1311,15 +1305,15 @@ def get_marketing_list_api(list_name):
 
     try:
         response = supabase.table("marketing_email_lists").select("*").eq("list_name", list_name).execute()
-        
+
         emails = [record['email'] for record in response.data]
-        
+
         return {
             'list_name': list_name,
             'emails': emails,
             'email_count': len(emails)
         }
-        
+
     except Exception as e:
         logger.error(f"Error getting marketing list API: {str(e)}")
         return {'error': f'Erro ao carregar lista: {str(e)}'}, 500
@@ -1336,7 +1330,7 @@ def save_marketing_list_api():
         data = request.get_json()
         list_name = data.get('list_name', '').strip()
         emails = data.get('emails', [])
-        
+
         if not list_name:
             return {'error': 'Nome da lista é obrigatório'}, 400
 
@@ -1352,7 +1346,7 @@ def save_marketing_list_api():
 
         # Delete existing list
         supabase.table("marketing_email_lists").delete().eq("list_name", list_name).execute()
-        
+
         # Insert new emails
         if valid_emails:
             email_records = []
@@ -1362,9 +1356,9 @@ def save_marketing_list_api():
                     'email': email,
                     'created_at': datetime.now().isoformat()
                 })
-            
+
             supabase.table("marketing_email_lists").insert(email_records).execute()
-        
+
         logger.info(f"Saved marketing list '{list_name}' with {len(valid_emails)} emails")
         return {
             'success': True,
@@ -1387,13 +1381,13 @@ def delete_marketing_list_api(list_name):
 
     try:
         supabase.table("marketing_email_lists").delete().eq("list_name", list_name).execute()
-        
+
         logger.info(f"Deleted marketing list: {list_name}")
         return {
             'success': True,
             'message': f'Lista "{list_name}" removida com sucesso'
         }
-        
+
     except Exception as e:
         logger.error(f"Error deleting marketing list API: {str(e)}")
         return {'error': f'Erro ao remover lista: {str(e)}'}, 500
@@ -1420,7 +1414,7 @@ def upload_marketing_emails_excel():
 
         # Read Excel file
         df = pd.read_excel(file)
-        
+
         # Get email column from request
         email_column = request.form.get('email_column', '')
         if not email_column:
@@ -1431,7 +1425,7 @@ def upload_marketing_emails_excel():
 
         # Extract emails from the specified column
         emails = df[email_column].dropna().astype(str).tolist()
-        
+
         # Clean and validate emails
         valid_emails = []
         for email in emails:
@@ -1452,18 +1446,19 @@ def upload_marketing_emails_excel():
             # Check if list already exists and get existing emails
             existing_emails = []
             try:
-                existing_result = supabase.table("marketing_email_lists").select("email").eq("list_name", list_name).execute()
+                existing_result = supabase.table("marketing_email_lists").select("email").eq("list_name",
+                                                                                             list_name).execute()
                 existing_emails = [row['email'] for row in existing_result.data]
             except Exception:
                 # List doesn't exist yet, that's fine
                 pass
-            
+
             # Filter out emails that already exist to avoid duplicates
             new_emails = []
             for email in valid_emails:
                 if email not in existing_emails:
                     new_emails.append(email)
-            
+
             if not new_emails:
                 return {
                     'success': True,
@@ -1472,7 +1467,7 @@ def upload_marketing_emails_excel():
                     'list_name': list_name,
                     'updated': False
                 }
-            
+
             # Insert only new emails
             email_records = []
             for email in new_emails:
@@ -1481,11 +1476,12 @@ def upload_marketing_emails_excel():
                     'email': email,
                     'created_at': datetime.now().isoformat()
                 })
-            
+
             if email_records:
                 supabase.table("marketing_email_lists").insert(email_records).execute()
-            
-            logger.info(f"Added {len(new_emails)} new marketing emails to list '{list_name}' (skipped {len(valid_emails) - len(new_emails)} duplicates)")
+
+            logger.info(
+                f"Added {len(new_emails)} new marketing emails to list '{list_name}' (skipped {len(valid_emails) - len(new_emails)} duplicates)")
             return {
                 'success': True,
                 'message': f'{len(new_emails)} novos emails adicionados à lista "{list_name}" (duplicados ignorados)',
