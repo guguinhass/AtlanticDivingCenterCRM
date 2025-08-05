@@ -17,6 +17,7 @@ from functools import wraps
 from openpyxl.styles import Alignment
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
 # --------Load Environment Variables-------
 load_dotenv()
 
@@ -32,12 +33,13 @@ logger.info("Scheduler initialization deferred - will be set up after Flask app 
 # --------Initialize Supabase-------
 supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
+# --------Initialize Flask App-------
 app = Flask(__name__)
+
 # ------------Login Credentials-------------
 app.secret_key = os.getenv('APP_SECRET_KEY')
 
-# Initialize scheduler after Flask app is created
-# Only initialize scheduler if not in debug mode AND not in reloader process
+#--------Initialize scheduler after Flask app is created--------
 if not app.debug and not os.environ.get('WERKZEUG_RUN_MAIN'):
     scheduler = BackgroundScheduler(daemon=True)
     scheduler.start()
@@ -52,7 +54,6 @@ app.config['SMTP_SERVER'] = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
 app.config['SMTP_PORT'] = int(os.getenv('SMTP_PORT', 465))
 app.config['SMTP_USERNAME'] = os.getenv('SMTP_USERNAME')
 app.config['SMTP_PASSWORD'] = os.getenv('SMTP_PASSWORD')
-
 
 # ---------Login/Logout Functions--------
 def login_required(f):
@@ -269,28 +270,15 @@ def debug_templates():
             'frances_body_length': len(frances_body.group(1).strip()) if frances_body else 0,
             'alemao_full_length': len(alemao_full),
             'alemao_body_length': len(alemao_body.group(1).strip()) if alemao_body else 0,
-            'portugues_body_preview': portugues_body.group(1).strip()[:200] + '...' if portugues_body else 'No body found',
+            'portugues_body_preview': portugues_body.group(1).strip()[
+                                      :200] + '...' if portugues_body else 'No body found',
             'portugues_full_preview': portugues_full[:200] + '...' if len(portugues_full) > 200 else portugues_full
         }
     except Exception as e:
         return {'error': str(e)}
 
 
-@app.route('/test-template-content')
-def test_template_content():
-    """Test what content is being passed to the edit template"""
-    try:
-        import re
-        with app.app_context():
-            portugues_full = render_template('email_feedback.html', nome="[NOME]")
-            body_match = re.search(r'<body[^>]*>(.*?)</body>', portugues_full, re.DOTALL | re.IGNORECASE)
-            portugues_body = body_match.group(1).strip() if body_match else portugues_full
-            
-            template_content = {'português': portugues_body}
-            
-            return render_template('test_template.html', template_content=template_content)
-    except Exception as e:
-        return f'Error: {str(e)}'
+
 
 
 @app.route('/clear-email-templates', methods=['POST'])
@@ -310,9 +298,6 @@ def clear_email_templates():
         logger.error(f"Error clearing email templates: {str(e)}")
 
     return redirect(url_for('index'))
-
-
-
 
 
 # ------------Flask Routes-----------
@@ -618,6 +603,120 @@ def exportar_emails():
         return redirect(url_for('index'))
 
 
+@app.route('/upload-excel-emails', methods=['POST'])
+@login_required
+def upload_excel_emails():
+    """Upload Excel file and extract emails from a column"""
+    if not session.get('is_admin'):
+        return redirect(url_for('index'))
+
+    try:
+        if 'excel_file' not in request.files:
+            flash('Nenhum arquivo selecionado.', 'danger')
+            return redirect(url_for('marketing_emails'))
+
+        file = request.files['excel_file']
+        if file.filename == '':
+            flash('Nenhum arquivo selecionado.', 'danger')
+            return redirect(url_for('marketing_emails'))
+
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            flash('Por favor, selecione um arquivo Excel (.xlsx ou .xls).', 'danger')
+            return redirect(url_for('marketing_emails'))
+
+        # Read the Excel file
+        df = pd.read_excel(file)
+
+        # Get column name from form
+        column_name = request.form.get('email_column', '').strip()
+
+        if not column_name:
+            flash('Por favor, especifique o nome da coluna que contém os emails.', 'danger')
+            return redirect(url_for('marketing_emails'))
+
+        # Check if column exists
+        if column_name not in df.columns:
+            available_columns = ', '.join(df.columns.tolist())
+            flash(f'Coluna "{column_name}" não encontrada. Colunas disponíveis: {available_columns}', 'danger')
+            return redirect(url_for('marketing_emails'))
+
+        # Extract emails from the specified column
+        emails = []
+        for email in df[column_name].dropna():
+            email_str = str(email).strip()
+            if email_str and '@' in email_str:
+                emails.append(email_str)
+
+        if not emails:
+            flash('Nenhum email válido encontrado na coluna especificada.', 'warning')
+            return redirect(url_for('marketing_emails'))
+
+        # Save emails to the marketing emails file
+        marketing_emails_file = 'marketing_emails.txt'
+        with open(marketing_emails_file, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(emails))
+
+        flash(f'✅ {len(emails)} emails importados com sucesso do arquivo Excel!', 'success')
+        logger.info(f"Imported {len(emails)} emails from Excel file: {file.filename}")
+
+        return redirect(url_for('marketing_emails'))
+
+    except Exception as e:
+        flash(f'Erro ao processar arquivo Excel: {str(e)}', 'danger')
+        logger.error(f"Error processing Excel file: {str(e)}")
+        return redirect(url_for('marketing_emails'))
+
+
+@app.route('/preview-excel-columns', methods=['POST'])
+@login_required
+def preview_excel_columns():
+    """Preview Excel file columns without saving emails"""
+    if not session.get('is_admin'):
+        return {'error': 'Unauthorized'}, 403
+
+    try:
+        if 'excel_file' not in request.files:
+            return {'error': 'Nenhum arquivo selecionado.'}, 400
+
+        file = request.files['excel_file']
+        if file.filename == '':
+            return {'error': 'Nenhum arquivo selecionado.'}, 400
+
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            return {'error': 'Por favor, selecione um arquivo Excel (.xlsx ou .xls).'}, 400
+
+        # Read the Excel file
+        df = pd.read_excel(file)
+
+        # Get column names and first few values
+        columns_info = []
+        for col in df.columns:
+            # Get first 5 non-null values from the column
+            sample_values = df[col].dropna().head(5).tolist()
+            # Convert numpy.int64 to regular Python int for JSON serialization
+            non_null_count = int(df[col].notna().sum())
+            total_rows = int(len(df))
+
+            columns_info.append({
+                'name': col,
+                'sample_values': sample_values,
+                'total_rows': total_rows,
+                'non_null_count': non_null_count
+            })
+
+        return {
+            'columns': columns_info,
+            'filename': file.filename
+        }
+
+    except Exception as e:
+        logger.error(f"Error previewing Excel file: {str(e)}")
+        return {'error': f'Erro ao processar arquivo: {str(e)}'}, 500
+
+
+
+
+
 @app.route('/admin/users', methods=['GET', 'POST'])
 @login_required
 def manage_users():
@@ -654,11 +753,7 @@ def manage_users():
     users = supabase.table("usuarios").select("*").execute().data
     return render_template("admin_users.html", users=users, mensagem=mensagem)
 
-
-# def open_browser():
-#   webbrowser.open_new_tab("http://127.0.0.1:5000")
-
-
+#----------Login-------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -679,7 +774,7 @@ def login():
             flash('Usuário ou senha inválidos', 'danger')
     return render_template('login.html')
 
-
+#-------Iva setter--------
 @app.route('/set-iva', methods=['POST'])
 @login_required
 def set_iva():
@@ -744,7 +839,7 @@ def editar_primeiro_email():
         flash('Erro ao abrir editor de email', 'danger')
         return redirect(url_for('index'))
 
-
+#-----------Edit Second Email------------
 @app.route('/editar-segundo-email', methods=['GET', 'POST'])
 @login_required
 def editar_segundo_email():
@@ -867,7 +962,7 @@ def edit_email_template():
     # Always load templates from files
     nacionalidades = ['português', 'inglês', 'francês', 'alemão']
     import re  # Move import to top of function
-    
+
     for nacionalidade in nacionalidades:
         try:
             # Always load from file first
@@ -885,11 +980,13 @@ def edit_email_template():
                 body_match = re.search(r'<body[^>]*>(.*?)</body>', full_template, re.DOTALL | re.IGNORECASE)
                 if body_match:
                     template_content[nacionalidade] = body_match.group(1).strip()
-                    logger.info(f"Extracted body content for {nacionalidade}: {len(template_content[nacionalidade])} chars")
+                    logger.info(
+                        f"Extracted body content for {nacionalidade}: {len(template_content[nacionalidade])} chars")
                 else:
                     # Fallback to full template if no body tag found
                     template_content[nacionalidade] = full_template
-                    logger.info(f"Using full template for {nacionalidade}: {len(template_content[nacionalidade])} chars")
+                    logger.info(
+                        f"Using full template for {nacionalidade}: {len(template_content[nacionalidade])} chars")
             logger.info(f"Loaded template from file for {nacionalidade} ({editing_template})")
 
         except Exception as e:
@@ -910,7 +1007,7 @@ def edit_email_template():
         logger.info(f"Template {nacionalidade}: {len(content)} chars")
         logger.info(f"First 100 chars: {content[:100]}...")
         logger.info(f"Last 100 chars: {content[-100:] if len(content) > 100 else content}")
-    
+
     return render_template('edit_email_template.html',
                            template_content=template_content,
                            editing_template=editing_template,
@@ -933,7 +1030,7 @@ def marketing_emails():
             subject = request.form.get('subject', '')
             content = request.form.get('content', '')
             bulk_emails_text = request.form.get('bulk_emails', '')
-            
+
             if not subject or not content:
                 flash('Por favor, preencha o assunto e o conteúdo do email.', 'danger')
                 return redirect(url_for('marketing_emails'))
@@ -951,7 +1048,7 @@ def marketing_emails():
                             cleaned_emails.extend(emails_in_line)
                         else:
                             cleaned_emails.append(line.strip())
-                
+
                 # Save one email per line, no extra spaces
                 with open(marketing_emails_file, 'w', encoding='utf-8') as f:
                     f.write('\n'.join(cleaned_emails))
@@ -981,7 +1078,8 @@ def marketing_emails():
             all_emails = list(set(bulk_emails + database_emails))  # Remove duplicates
 
             if not all_emails:
-                flash('Nenhum destinatário encontrado. Adicione emails ou marque "Incluir clientes da base de dados".', 'warning')
+                flash('Nenhum destinatário encontrado. Adicione emails ou marque "Incluir clientes da base de dados".',
+                      'warning')
                 return redirect(url_for('marketing_emails'))
 
             # Send marketing email to all recipients
@@ -1021,21 +1119,36 @@ def marketing_emails():
             flash(f'Erro ao enviar marketing emails: {str(e)}', 'danger')
             logger.error(f"Marketing email error: {str(e)}")
 
-    # Load existing emails from file
-    saved_emails = ""
-    try:
-        if os.path.exists(marketing_emails_file):
-            with open(marketing_emails_file, 'r', encoding='utf-8') as f:
-                saved_emails = f.read()
-            logger.info(f"Loaded {len(saved_emails.split())} emails from {marketing_emails_file}")
-    except Exception as e:
-        logger.error(f"Error loading marketing emails file: {str(e)}")
-
     # Get client count for display
     response = supabase.table("clientes").select("*").execute()
     client_count = len(response.data)
 
-    return render_template('marketing_emails.html', client_count=client_count, saved_emails=saved_emails)
+    # Get marketing email lists from Supabase
+    email_lists = []
+    try:
+        lists_response = supabase.table("marketing_email_lists").select("*").execute()
+        
+        # Group emails by list name
+        lists = {}
+        for record in lists_response.data:
+            list_name = record['list_name']
+            if list_name not in lists:
+                lists[list_name] = []
+            lists[list_name].append(record['email'])
+        
+        # Convert to format for frontend
+        for list_name, emails in lists.items():
+            email_lists.append({
+                'list_name': list_name,
+                'email_count': len(emails),
+                'emails': emails
+            })
+        
+        logger.info(f"Loaded {len(email_lists)} marketing email lists from Supabase")
+    except Exception as e:
+        logger.error(f"Error loading marketing email lists: {str(e)}")
+
+    return render_template('marketing_emails.html', client_count=client_count, email_lists=email_lists)
 
 
 @app.route('/clear-marketing-emails', methods=['POST'])
@@ -1058,6 +1171,336 @@ def clear_marketing_emails():
         logger.error(f"Error clearing marketing emails file: {str(e)}")
 
     return redirect(url_for('marketing_emails'))
+
+
+
+
+
+@app.route('/get-marketing-email-lists', methods=['GET'])
+@login_required
+def get_marketing_email_lists():
+    """Get all marketing email lists from Supabase"""
+    if not session.get('is_admin'):
+        return {'error': 'Unauthorized'}, 403
+
+    try:
+        response = supabase.table("marketing_email_lists").select("*").execute()
+        
+        # Group emails by list name
+        lists = {}
+        for record in response.data:
+            list_name = record['list_name']
+            if list_name not in lists:
+                lists[list_name] = []
+            lists[list_name].append(record['email'])
+        
+        # Convert to format for frontend
+        email_lists = []
+        for list_name, emails in lists.items():
+            email_lists.append({
+                'list_name': list_name,
+                'email_count': len(emails),
+                'emails': emails
+            })
+        
+        return {'lists': email_lists}
+        
+    except Exception as e:
+        logger.error(f"Error getting marketing email lists: {str(e)}")
+        return {'error': f'Erro ao carregar listas: {str(e)}'}, 500
+
+
+@app.route('/delete-marketing-email-list', methods=['POST'])
+@login_required
+def delete_marketing_email_list():
+    """Delete a marketing email list from Supabase"""
+    if not session.get('is_admin'):
+        return {'error': 'Unauthorized'}, 403
+
+    try:
+        list_name = request.form.get('list_name', '')
+        if not list_name:
+            return {'error': 'Nome da lista não especificado'}, 400
+
+        # Delete the list
+        supabase.table("marketing_email_lists").delete().eq("list_name", list_name).execute()
+        
+        logger.info(f"Deleted marketing email list: {list_name}")
+        return {'success': True, 'message': f'Lista "{list_name}" removida com sucesso'}
+        
+    except Exception as e:
+        logger.error(f"Error deleting marketing email list: {str(e)}")
+        return {'error': f'Erro ao remover lista: {str(e)}'}, 500
+
+
+@app.route('/marketing-email-editor', methods=['GET'])
+@login_required
+def marketing_email_editor():
+    """Web-based Excel editor for marketing email lists"""
+    if not session.get('is_admin'):
+        return redirect(url_for('index'))
+
+    # Get all existing lists
+    email_lists = []
+    try:
+        lists_response = supabase.table("marketing_email_lists").select("*").execute()
+        
+        # Group emails by list name
+        lists = {}
+        for record in lists_response.data:
+            list_name = record['list_name']
+            if list_name not in lists:
+                lists[list_name] = []
+            lists[list_name].append(record['email'])
+        
+        # Convert to format for frontend
+        for list_name, emails in lists.items():
+            email_lists.append({
+                'list_name': list_name,
+                'email_count': len(emails),
+                'emails': emails
+            })
+        
+        logger.info(f"Loaded {len(email_lists)} marketing email lists for editor")
+    except Exception as e:
+        logger.error(f"Error loading marketing email lists for editor: {str(e)}")
+
+    return render_template('marketing_email_editor.html', email_lists=email_lists)
+
+
+@app.route('/api/marketing-lists', methods=['GET'])
+@login_required
+def get_marketing_lists_api():
+    """API endpoint to get all marketing lists"""
+    if not session.get('is_admin'):
+        return {'error': 'Unauthorized'}, 403
+
+    try:
+        response = supabase.table("marketing_email_lists").select("*").execute()
+        
+        # Group emails by list name
+        lists = {}
+        for record in response.data:
+            list_name = record['list_name']
+            if list_name not in lists:
+                lists[list_name] = []
+            lists[list_name].append(record['email'])
+        
+        # Convert to format for frontend
+        email_lists = []
+        for list_name, emails in lists.items():
+            email_lists.append({
+                'list_name': list_name,
+                'email_count': len(emails),
+                'emails': emails
+            })
+        
+        return {'lists': email_lists}
+        
+    except Exception as e:
+        logger.error(f"Error getting marketing lists API: {str(e)}")
+        return {'error': f'Erro ao carregar listas: {str(e)}'}, 500
+
+
+@app.route('/api/marketing-list/<list_name>', methods=['GET'])
+@login_required
+def get_marketing_list_api(list_name):
+    """API endpoint to get a specific marketing list"""
+    if not session.get('is_admin'):
+        return {'error': 'Unauthorized'}, 403
+
+    try:
+        response = supabase.table("marketing_email_lists").select("*").eq("list_name", list_name).execute()
+        
+        emails = [record['email'] for record in response.data]
+        
+        return {
+            'list_name': list_name,
+            'emails': emails,
+            'email_count': len(emails)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting marketing list API: {str(e)}")
+        return {'error': f'Erro ao carregar lista: {str(e)}'}, 500
+
+
+@app.route('/api/marketing-list', methods=['POST'])
+@login_required
+def save_marketing_list_api():
+    """API endpoint to save/update a marketing list"""
+    if not session.get('is_admin'):
+        return {'error': 'Unauthorized'}, 403
+
+    try:
+        data = request.get_json()
+        list_name = data.get('list_name', '').strip()
+        emails = data.get('emails', [])
+        
+        if not list_name:
+            return {'error': 'Nome da lista é obrigatório'}, 400
+
+        # Validate emails
+        valid_emails = []
+        for email in emails:
+            email = email.strip()
+            if email and '@' in email and '.' in email.split('@')[1]:
+                valid_emails.append(email)
+
+        # Remove duplicates
+        valid_emails = list(set(valid_emails))
+
+        # Delete existing list
+        supabase.table("marketing_email_lists").delete().eq("list_name", list_name).execute()
+        
+        # Insert new emails
+        if valid_emails:
+            email_records = []
+            for email in valid_emails:
+                email_records.append({
+                    'list_name': list_name,
+                    'email': email,
+                    'created_at': datetime.now().isoformat()
+                })
+            
+            supabase.table("marketing_email_lists").insert(email_records).execute()
+        
+        logger.info(f"Saved marketing list '{list_name}' with {len(valid_emails)} emails")
+        return {
+            'success': True,
+            'message': f'Lista "{list_name}" salva com {len(valid_emails)} emails',
+            'list_name': list_name,
+            'email_count': len(valid_emails)
+        }
+
+    except Exception as e:
+        logger.error(f"Error saving marketing list API: {str(e)}")
+        return {'error': f'Erro ao salvar lista: {str(e)}'}, 500
+
+
+@app.route('/api/marketing-list/<list_name>', methods=['DELETE'])
+@login_required
+def delete_marketing_list_api(list_name):
+    """API endpoint to delete a marketing list"""
+    if not session.get('is_admin'):
+        return {'error': 'Unauthorized'}, 403
+
+    try:
+        supabase.table("marketing_email_lists").delete().eq("list_name", list_name).execute()
+        
+        logger.info(f"Deleted marketing list: {list_name}")
+        return {
+            'success': True,
+            'message': f'Lista "{list_name}" removida com sucesso'
+        }
+        
+    except Exception as e:
+        logger.error(f"Error deleting marketing list API: {str(e)}")
+        return {'error': f'Erro ao remover lista: {str(e)}'}, 500
+
+
+@app.route('/upload-marketing-emails-excel', methods=['POST'])
+@login_required
+def upload_marketing_emails_excel():
+    """Upload Excel file with marketing emails and store in Supabase"""
+    if not session.get('is_admin'):
+        return {'error': 'Unauthorized'}, 403
+
+    try:
+        if 'excel_file' not in request.files:
+            return {'error': 'Nenhum arquivo foi enviado'}, 400
+
+        file = request.files['excel_file']
+        if file.filename == '':
+            return {'error': 'Nenhum arquivo foi selecionado'}, 400
+
+        # Check file extension
+        if not file.filename.lower().endswith(('.xlsx', '.xls')):
+            return {'error': 'Por favor, selecione um arquivo Excel válido (.xlsx ou .xls)'}, 400
+
+        # Read Excel file
+        df = pd.read_excel(file)
+        
+        # Get email column from request
+        email_column = request.form.get('email_column', '')
+        if not email_column:
+            return {'error': 'Coluna de email não especificada'}, 400
+
+        if email_column not in df.columns:
+            return {'error': f'Coluna "{email_column}" não encontrada no arquivo'}, 400
+
+        # Extract emails from the specified column
+        emails = df[email_column].dropna().astype(str).tolist()
+        
+        # Clean and validate emails
+        valid_emails = []
+        for email in emails:
+            email = email.strip()
+            if email and '@' in email and '.' in email.split('@')[1]:
+                valid_emails.append(email)
+
+        if not valid_emails:
+            return {'error': 'Nenhum email válido encontrado no arquivo'}, 400
+
+        # Get list name from request
+        list_name = request.form.get('list_name', 'Lista de Marketing')
+        if not list_name.strip():
+            list_name = 'Lista de Marketing'
+
+        # Store emails in Supabase
+        try:
+            # Check if list already exists and get existing emails
+            existing_emails = []
+            try:
+                existing_result = supabase.table("marketing_email_lists").select("email").eq("list_name", list_name).execute()
+                existing_emails = [row['email'] for row in existing_result.data]
+            except Exception:
+                # List doesn't exist yet, that's fine
+                pass
+            
+            # Filter out emails that already exist to avoid duplicates
+            new_emails = []
+            for email in valid_emails:
+                if email not in existing_emails:
+                    new_emails.append(email)
+            
+            if not new_emails:
+                return {
+                    'success': True,
+                    'message': f'Todos os emails já existem na lista "{list_name}". Nenhum novo email adicionado.',
+                    'count': 0,
+                    'list_name': list_name,
+                    'updated': False
+                }
+            
+            # Insert only new emails
+            email_records = []
+            for email in new_emails:
+                email_records.append({
+                    'list_name': list_name,
+                    'email': email,
+                    'created_at': datetime.now().isoformat()
+                })
+            
+            if email_records:
+                supabase.table("marketing_email_lists").insert(email_records).execute()
+            
+            logger.info(f"Added {len(new_emails)} new marketing emails to list '{list_name}' (skipped {len(valid_emails) - len(new_emails)} duplicates)")
+            return {
+                'success': True,
+                'message': f'{len(new_emails)} novos emails adicionados à lista "{list_name}" (duplicados ignorados)',
+                'count': len(new_emails),
+                'list_name': list_name,
+                'updated': True
+            }
+
+        except Exception as db_error:
+            logger.error(f"Database error: {str(db_error)}")
+            return {'error': f'Erro ao salvar na base de dados: {str(db_error)}'}, 500
+
+    except Exception as e:
+        logger.error(f"Error uploading marketing emails Excel: {str(e)}")
+        return {'error': f'Erro ao processar arquivo: {str(e)}'}, 500
 
 
 if __name__ == '__main__':

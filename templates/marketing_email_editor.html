@@ -1,0 +1,554 @@
+<!doctype html>
+<html>
+<head>
+    <title>Editor de Listas de Marketing - CRM Atlantic Diving Center</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .editor-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .editor-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .email-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .email-table th {
+            background: #f8f9fa;
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .email-table td {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            vertical-align: middle;
+        }
+
+        .email-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .editable-cell {
+            border: none;
+            background: transparent;
+            width: 100%;
+            padding: 4px;
+            font-size: 14px;
+        }
+
+        .editable-cell:focus {
+            outline: 2px solid #007bff;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .invalid-email {
+            background-color: #ffe6e6;
+            border: 1px solid #ffcccc;
+        }
+
+        .valid-email {
+            background-color: #e6ffe6;
+            border: 1px solid #ccffcc;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .list-selector {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .list-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .list-card:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .list-card.active {
+            border-color: #007bff;
+            background-color: #f0f8ff;
+        }
+
+        .stats-bar {
+            background: #e9ecef;
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-table"></i> Editor de Listas de Marketing</h2>
+        <div>
+            <a href="{{ url_for('marketing_emails') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar ao Marketing
+            </a>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-home"></i> Início
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Indicator -->
+    <div class="status-indicator" id="statusIndicator" style="display: none;">
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check"></i> <span id="statusMessage">Alterações salvas automaticamente</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    </div>
+
+    <!-- List Selector -->
+    <div class="list-selector">
+        <div class="row">
+            <div class="col-md-8">
+                <h5><i class="fas fa-list"></i> Selecionar Lista</h5>
+                <div class="row" id="listsContainer">
+                    {% if email_lists %}
+                        {% for list in email_lists %}
+                            <div class="col-md-4 mb-3">
+                                <div class="list-card" onclick="loadList('{{ list.list_name }}')">
+                                    <h6 class="mb-1">{{ list.list_name }}</h6>
+                                    <small class="text-muted">{{ list.email_count }} emails</small>
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-outline-primary"
+                                                onclick="event.stopPropagation(); loadList('{{ list.list_name }}')">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger"
+                                                onclick="event.stopPropagation(); deleteList('{{ list.list_name }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="col-12">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                <p>Nenhuma lista encontrada</p>
+                                <small>Crie sua primeira lista para começar</small>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-plus"></i> Nova Lista</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nome da Lista:</label>
+                            <input type="text" class="form-control" id="newListName"
+                                   placeholder="Ex: Newsletter Subscribers">
+                        </div>
+                        <button class="btn btn-primary" onclick="createNewList()">
+                            <i class="fas fa-plus"></i> Criar Nova Lista
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Editor -->
+    <div class="editor-container" id="emailEditor" style="display: none;">
+        <div class="editor-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1" id="currentListName">Lista de Marketing</h4>
+                    <small id="currentListStats">0 emails válidos</small>
+                </div>
+                <div>
+                    <button class="btn btn-light btn-sm" onclick="addNewRow()">
+                        <i class="fas fa-plus"></i> Adicionar Email
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="saveList()">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4">
+            <!-- Stats Bar -->
+            <div class="stats-bar" id="statsBar">
+                <i class="fas fa-info-circle"></i>
+                <span id="statsText">Carregando estatísticas...</span>
+            </div>
+
+            <!-- Email Table -->
+            <div class="table-responsive">
+                <table class="email-table" id="emailTable">
+                    <thead>
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th style="width: 300px;">Email</th>
+                        <th style="width: 200px;">Nome (Opcional)</th>
+                        <th style="width: 150px;">Telefone (Opcional)</th>
+                        <th style="width: 100px;">Ações</th>
+                    </tr>
+                    </thead>
+                    <tbody id="emailTableBody">
+                    <!-- Rows will be added dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="text-center py-5" style="display: none;">
+                <i class="fas fa-envelope fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Nenhum email adicionado</h5>
+                <p class="text-muted">Clique em "Adicionar Email" para começar</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let currentList = null;
+    let hasUnsavedChanges = false;
+    let autoSaveTimer = null;
+    let rowCounter = 0;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function () {
+        setupAutoSave();
+    });
+
+    // Auto-save functionality
+    function setupAutoSave() {
+        setInterval(() => {
+            if (hasUnsavedChanges && currentList) {
+                saveList(true); // Auto-save
+            }
+        }, 30000); // Every 30 seconds
+    }
+
+    // Create new list
+    function createNewList() {
+        const listName = document.getElementById('newListName').value.trim();
+        if (!listName) {
+            alert('Por favor, insira um nome para a lista.');
+            return;
+        }
+
+        currentList = {
+            list_name: listName,
+            emails: []
+        };
+
+        showEditor();
+        updateStats();
+        showStatus('Nova lista criada', 'success');
+    }
+
+    // Load existing list
+    function loadList(listName) {
+        fetch(`/api/marketing-list/${encodeURIComponent(listName)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(`Erro: ${data.error}`);
+                    return;
+                }
+
+                currentList = data;
+                showEditor();
+                populateTable();
+                updateStats();
+                showStatus(`Lista "${listName}" carregada`, 'success');
+            })
+            .catch(error => {
+                console.error('Error loading list:', error);
+                alert('Erro ao carregar lista');
+            });
+    }
+
+    // Show editor
+    function showEditor() {
+        document.getElementById('emailEditor').style.display = 'block';
+        document.getElementById('currentListName').textContent = currentList.list_name;
+        populateTable();
+    }
+
+    // Populate table with emails
+    function populateTable() {
+        const tbody = document.getElementById('emailTableBody');
+        tbody.innerHTML = '';
+
+        if (currentList.emails.length === 0) {
+            document.getElementById('emptyState').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('emptyState').style.display = 'none';
+
+        currentList.emails.forEach((email, index) => {
+            addRowToTable(email, index);
+        });
+    }
+
+    // Add new row
+    function addNewRow() {
+        addRowToTable('', currentList.emails.length);
+        hasUnsavedChanges = true;
+        updateStats();
+    }
+
+    // Add row to table
+    function addRowToTable(email, index) {
+        const tbody = document.getElementById('emailTableBody');
+        const row = document.createElement('tr');
+        row.id = `row-${rowCounter}`;
+
+        row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>
+                <input type="email" class="form-control editable-cell" 
+                       value="${email}" 
+                       onchange="updateEmail(${rowCounter}, this.value)"
+                       placeholder="email@exemplo.com">
+            </td>
+            <td>
+                <input type="text" class="form-control editable-cell" 
+                       onchange="updateName(${rowCounter}, this.value)"
+                       placeholder="Nome (opcional)">
+            </td>
+            <td>
+                <input type="text" class="form-control editable-cell" 
+                       onchange="updatePhone(${rowCounter}, this.value)"
+                       placeholder="Telefone (opcional)">
+            </td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteRow(${rowCounter})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+
+        tbody.appendChild(row);
+        rowCounter++;
+    }
+
+    // Update email
+    function updateEmail(rowIndex, value) {
+        const row = document.getElementById(`row-${rowIndex}`);
+        const emailCell = row.querySelector('input[type="email"]');
+
+        // Validate email
+        if (value && !isValidEmail(value)) {
+            emailCell.classList.add('invalid-email');
+        } else {
+            emailCell.classList.remove('invalid-email');
+            emailCell.classList.add('valid-email');
+        }
+
+        hasUnsavedChanges = true;
+        updateStats();
+    }
+
+    // Update name
+    function updateName(rowIndex, value) {
+        hasUnsavedChanges = true;
+    }
+
+    // Update phone
+    function updatePhone(rowIndex, value) {
+        hasUnsavedChanges = true;
+    }
+
+    // Delete row
+    function deleteRow(rowIndex) {
+        if (confirm('Tem certeza que deseja remover este email?')) {
+            document.getElementById(`row-${rowIndex}`).remove();
+            hasUnsavedChanges = true;
+            updateStats();
+        }
+    }
+
+    // Save list
+    function saveList(isAutoSave = false) {
+        if (!currentList) return;
+
+        const emails = [];
+        const rows = document.querySelectorAll('#emailTableBody tr');
+
+        rows.forEach(row => {
+            const emailInput = row.querySelector('input[type="email"]');
+            if (emailInput && emailInput.value.trim()) {
+                emails.push(emailInput.value.trim());
+            }
+        });
+
+        currentList.emails = emails;
+
+        fetch('/api/marketing-list', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(currentList)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(`Erro: ${data.error}`);
+                    return;
+                }
+
+                hasUnsavedChanges = false;
+                if (!isAutoSave) {
+                    showStatus(data.message, 'success');
+                }
+                updateStats();
+            })
+            .catch(error => {
+                console.error('Error saving list:', error);
+                alert('Erro ao salvar lista');
+            });
+    }
+
+    // Delete list
+    function deleteList(listName) {
+        if (!confirm(`Tem certeza que deseja remover a lista "${listName}"? Esta ação não pode ser desfeita.`)) {
+            return;
+        }
+
+        fetch(`/api/marketing-list/${encodeURIComponent(listName)}`, {
+            method: 'DELETE'
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(`Erro: ${data.error}`);
+                    return;
+                }
+
+                showStatus(data.message, 'success');
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error deleting list:', error);
+                alert('Erro ao remover lista');
+            });
+    }
+
+    // Update stats
+    function updateStats() {
+        const rows = document.querySelectorAll('#emailTableBody tr');
+        let validEmails = 0;
+        let invalidEmails = 0;
+        let totalEmails = 0;
+
+        rows.forEach(row => {
+            const emailInput = row.querySelector('input[type="email"]');
+            if (emailInput && emailInput.value.trim()) {
+                totalEmails++;
+                if (isValidEmail(emailInput.value.trim())) {
+                    validEmails++;
+                } else {
+                    invalidEmails++;
+                }
+            }
+        });
+
+        const statsText = document.getElementById('statsText');
+        const currentListStats = document.getElementById('currentListStats');
+
+        statsText.innerHTML = `
+            <strong>${totalEmails}</strong> emails totais | 
+            <span class="text-success"><strong>${validEmails}</strong> válidos</span> | 
+            <span class="text-danger"><strong>${invalidEmails}</strong> inválidos</span>
+        `;
+
+        currentListStats.textContent = `${validEmails} emails válidos`;
+
+        // Show/hide empty state
+        if (totalEmails === 0) {
+            document.getElementById('emptyState').style.display = 'block';
+        } else {
+            document.getElementById('emptyState').style.display = 'none';
+        }
+    }
+
+    // Show status message
+    function showStatus(message, type = 'success') {
+        const indicator = document.getElementById('statusIndicator');
+        const messageSpan = document.getElementById('statusMessage');
+
+        messageSpan.textContent = message;
+        indicator.style.display = 'block';
+
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 3000);
+    }
+
+    // Validate email
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+
+    // Handle beforeunload
+    window.addEventListener('beforeunload', function (e) {
+        if (hasUnsavedChanges) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+</script>
+
+</body>
+</html> 
