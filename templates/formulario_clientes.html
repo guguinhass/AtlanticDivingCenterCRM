@@ -371,13 +371,13 @@
             var comIva = (base * (1 + iva)).toFixed(2);
             ivaSpan.textContent = comIva;
 
-            // Get the current final value (either from user input or calculated)
-            var currentFinalValue = parseFloat(finalInput.value) || parseFloat(comIva);
             var desconto = parseFloat(descontoInput.value) || 0;
-
-            // If this is the first time or the base/IVA changed, update the original value
-            if (originalFinalValue === 0 || baseInput.value !== baseInput.dataset.lastBase || ivaInput.value !== ivaInput.dataset.lastIva) {
-                originalFinalValue = currentFinalValue;
+            
+            // Only update the final value if it's completely empty (first time) or if base/IVA changed
+            var currentFinalValue = parseFloat(finalInput.value);
+            if (isNaN(currentFinalValue) || baseInput.value !== baseInput.dataset.lastBase || ivaInput.value !== ivaInput.dataset.lastIva) {
+                originalFinalValue = parseFloat(comIva);
+                finalInput.value = comIva;
                 baseInput.dataset.lastBase = baseInput.value;
                 ivaInput.dataset.lastIva = ivaInput.value;
             }
@@ -395,8 +395,10 @@
         descontoInput.addEventListener('input', updateIVA);
         finalInput.addEventListener('input', function() {
             // When user manually changes the final value, update the original value
-            originalFinalValue = parseFloat(finalInput.value) || 0;
-            updateIVA();
+            var newValue = parseFloat(this.value);
+            if (!isNaN(newValue)) {
+                originalFinalValue = newValue;
+            }
         });
         updateIVA();
         // Initialize Quill
