@@ -316,6 +316,15 @@ def index():
             except (ValueError, TypeError):
                 desconto = 0.0
 
+            # Handle gastos field (admin only)
+            gastos = 0.0
+            if session.get('is_admin'):
+                gastos_str = request.form.get('gastos', '')
+                try:
+                    gastos = float(gastos_str) if gastos_str else 0.0
+                except (ValueError, TypeError):
+                    gastos = 0.0
+
             supabase.table("clientes").insert({
                 "adicionado_por": session.get('username', 'desconhecido'),
                 "nome": request.form['nome'],
@@ -326,6 +335,7 @@ def index():
                 "desconto": desconto,
                 "iva": float(request.form.get('iva', 0.22)),
                 "nacionalidade": request.form.get('nacionalidade', 'portugues'),
+                "gastos": gastos,
                 "primeiro_email_enviado": False,
                 "segundo_email_enviado": False,
                 "email_manual_enviado": False,
@@ -471,6 +481,33 @@ def remover_cliente(email):
         return str(e), 500
 
 
+# ---------Update Gastos---------
+@app.route('/update-gastos', methods=['POST'])
+@login_required
+def update_gastos():
+    """Update gastos for a client (admin only)"""
+    if not session.get('is_admin'):
+        return {'success': False, 'error': 'Unauthorized'}, 403
+    
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        gastos = data.get('gastos', 0)
+        
+        if not email:
+            return {'success': False, 'error': 'Email is required'}
+        
+        # Update the gastos field in the database
+        supabase.table("clientes").update({"gastos": gastos}).eq("email", email).execute()
+        
+        logger.info(f"Gastos updated for {email}: {gastos}")
+        return {'success': True}
+        
+    except Exception as e:
+        logger.error(f"Error updating gastos: {str(e)}")
+        return {'success': False, 'error': str(e)}
+
+
 # -------Send Email to All-----------
 @app.route('/enviar-todos', methods=['POST'])
 def enviar_manual_todos():
@@ -555,7 +592,8 @@ def exportar_emails():
             'Valor(€)': cliente["valor_fatura"],
             'Valor com Iva': cliente["valor_fatura"] * 1.22,
             'IVA': cliente["valor_fatura"] * 0.22,
-            'Desconto': cliente["desconto"]
+            'Desconto': cliente["desconto"],
+            'Gastos(€)': cliente.get("gastos", 0) or 0
         } for cliente in clientes]
 
         df = pd.DataFrame(clientes_data)
