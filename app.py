@@ -335,7 +335,7 @@ def index():
                 "data_mergulho": request.form['data_mergulho'],
                 "valor_fatura": float(request.form['valor_fatura']),
                 "desconto": desconto,
-                "iva": float(request.form.get('iva', 0.22)),
+                "iva": float(request.form.get('iva', 22)) / 100,
                 "nacionalidade": request.form.get('nacionalidade', 'portugues'),
                 "gastos": gastos,
                 "primeiro_email_enviado": False,
@@ -635,8 +635,8 @@ def exportar_emails():
             '2º Email Enviado': 'Sim' if cliente["segundo_email_enviado"] else 'Não',
             'Email Manual': 'Sim' if cliente["email_manual_enviado"] else 'Não',
             'Valor(€)': cliente["valor_fatura"],
-            'Valor com Iva': cliente["valor_fatura"] * 1.22,
-            'IVA': cliente["valor_fatura"] * 0.22,
+            'Valor com Iva': cliente["valor_fatura"] * (1 + cliente["iva"]),
+            'IVA': cliente["valor_fatura"] * cliente["iva"],
             'Desconto': cliente["desconto"],
             'Gastos(€)': cliente.get("gastos", 0) or 0
         } for cliente in clientes]
