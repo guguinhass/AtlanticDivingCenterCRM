@@ -117,6 +117,25 @@
 
                 <div class="mb-3">
                     <label class="form-label">Conteúdo do Email:</label>
+                    <div class="mb-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="attachImage()">
+                            <i class="fas fa-image"></i> Anexar Imagem
+                        </button>
+                        <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
+                        <small class="text-muted d-block mt-1">
+                            <i class="fas fa-info-circle"></i> As imagens serão enviadas como anexos separados no email.
+                        </small>
+                    </div>
+                    <div id="attachmentList" class="mb-2" style="display: none;">
+                        <div class="card">
+                            <div class="card-header py-2">
+                                <h6 class="mb-0"><i class="fas fa-paperclip"></i> Anexos</h6>
+                            </div>
+                            <div class="card-body py-2" id="attachmentItems">
+                                <!-- Attachment items will be added here -->
+                            </div>
+                        </div>
+                    </div>
                     <div id="emailEditor" style="height: 300px;"></div>
                     <input type="hidden" name="content" id="emailContent">
                     <input type="hidden" name="include_database" id="includeDatabaseHidden">
@@ -427,7 +446,8 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
         // Show confirmation
         const databaseCount = parseInt('{{ client_count }}');
         const totalRecipients = includeDatabase ? (databaseCount + bulkEmails.length) : bulkEmails.length;
-        const confirmMessage = `📤 Confirmar envio de marketing email para ${totalRecipients} destinatários?`;
+        const attachmentText = emailAttachments.length > 0 ? ` com ${emailAttachments.length} anexo(s)` : '';
+        const confirmMessage = `📤 Confirmar envio de marketing email para ${totalRecipients} destinatários${attachmentText}?`;
 
         if (confirm(confirmMessage)) {
             return true;
@@ -438,9 +458,53 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
 
     // Handle form submission
     document.getElementById('marketingForm').addEventListener('submit', function (e) {
+        e.preventDefault(); // Always prevent default to handle with AJAX
+        
         if (!sendMarketingEmail()) {
-            e.preventDefault();
+            return;
         }
+        
+        // Create FormData from the form
+        const formData = new FormData(this);
+        
+        // Add attachments to form data
+        emailAttachments.forEach((attachment, index) => {
+            formData.append(`attachment_${index}`, attachment.file);
+        });
+        
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '📤 Enviando...';
+        submitBtn.disabled = true;
+        
+        // Send the form data via AJAX
+        fetch('{{ url_for("marketing_emails") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                return response.text();
+            }
+        })
+        .then(html => {
+            if (html) {
+                // Replace the page content with the response
+                document.documentElement.innerHTML = html;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ Erro ao enviar marketing email: ' + error.message);
+        })
+        .finally(() => {
+            // Restore button state
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        });
     });
 
     // Auto-validate emails when typing
@@ -788,6 +852,93 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
         });
 
         container.innerHTML = html;
+    }
+
+    // Global variable to store attachments
+    let emailAttachments = [];
+
+    function attachImage() {
+        const imageInput = document.getElementById('imageInput');
+        if (imageInput) {
+            imageInput.click();
+        } else {
+            console.error('Image input element not found');
+        }
+    }
+
+    function handleImageUpload(input) {
+        const file = input.files[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Por favor, selecione apenas arquivos de imagem.');
+                input.value = '';
+                return;
+            }
+            
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('A imagem deve ter menos de 5MB.');
+                input.value = '';
+                return;
+            }
+            
+            // Add file to attachments list
+            addAttachmentToList(file);
+        }
+        // Reset input
+        input.value = '';
+    }
+
+    function addAttachmentToList(file) {
+        const attachmentId = 'attachment_' + Date.now();
+        const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+        
+        // Add to attachments array
+        emailAttachments.push({
+            id: attachmentId,
+            file: file,
+            name: file.name,
+            size: fileSize,
+            type: file.type
+        });
+        
+        // Create attachment item HTML
+        const attachmentItem = document.createElement('div');
+        attachmentItem.className = 'attachment-item d-flex align-items-center justify-content-between p-2 border-bottom';
+        attachmentItem.id = attachmentId;
+        attachmentItem.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-image text-primary me-2"></i>
+                <div>
+                    <div class="fw-bold">${file.name}</div>
+                    <small class="text-muted">${fileSize}</small>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAttachment('${attachmentId}')">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        // Add to attachment list
+        document.getElementById('attachmentItems').appendChild(attachmentItem);
+        document.getElementById('attachmentList').style.display = 'block';
+    }
+
+    function removeAttachment(attachmentId) {
+        // Remove from attachments array
+        emailAttachments = emailAttachments.filter(att => att.id !== attachmentId);
+        
+        // Remove from DOM
+        const attachmentItem = document.getElementById(attachmentId);
+        if (attachmentItem) {
+            attachmentItem.remove();
+        }
+        
+        // Hide attachment list if empty
+        if (emailAttachments.length === 0) {
+            document.getElementById('attachmentList').style.display = 'none';
+        }
     }
 </script>
 

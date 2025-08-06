@@ -7,6 +7,7 @@ import os
 import logging
 import pandas as pd
 import io
+import base64
 from threading import Timer
 from dotenv import load_dotenv
 from supabase import create_client
@@ -115,6 +116,7 @@ def enviar_email(destinatario, assunto, nome, internacional, template_type='prim
         # Replace [NOME] placeholder with actual name
         corpo_html = template_content.replace('[NOME]', nome)
 
+        # Create message
         msg = MIMEMultipart("alternative")
         msg['From'] = app.config['SMTP_USERNAME']
         msg['To'] = destinatario
@@ -426,6 +428,14 @@ def enviar_email_personalizado():
         subject = request.form.get('subject')
         content = request.form.get('content')
 
+        # Get file attachments
+        attachments = []
+        for key in request.files:
+            if key.startswith('attachment_'):
+                file = request.files[key]
+                if file and file.filename:
+                    attachments.append(file)
+
         # Fetch client from Supabase
         response = supabase.table("clientes").select("*").eq("email", email).execute()
         if not response.data:
@@ -438,11 +448,11 @@ def enviar_email_personalizado():
             logger.info(f'Email já enviado para {email}')
             return 'Email já enviado', 400
 
-        # Send the custom email
-        if enviar_email_personalizado_aux(cliente['email'], subject, content):
+        # Send the custom email with attachments
+        if enviar_email_personalizado_aux(cliente['email'], subject, content, attachments):
             # Update in Supabase
             supabase.table("clientes").update({"email_manual_enviado": True}).eq("email", email).execute()
-            logger.info(f'Email personalizado enviado com sucesso para {email}')
+            logger.info(f'Email personalizado enviado com sucesso para {email} com {len(attachments)} anexos')
             return '', 204
         else:
             logger.error(f'Falha ao enviar email personalizado para {email}')
@@ -453,18 +463,53 @@ def enviar_email_personalizado():
         return str(e), 500
 
 
-def enviar_email_personalizado_aux(destinatario, assunto, conteudo):
+def enviar_email_personalizado_aux(destinatario, assunto, conteudo, attachments=None):
     try:
-        msg = MIMEMultipart("alternative")
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        from email.mime.image import MIMEImage
+        
+        # Create multipart message
+        msg = MIMEMultipart("mixed")
         msg['From'] = app.config['SMTP_USERNAME']
         msg['To'] = destinatario
         msg['Subject'] = assunto
-        msg.attach(MIMEText(conteudo, "html"))
-
+        
+        # Add headers for better email client compatibility
+        msg.add_header('X-Mailer', 'Atlantic Diving Center CRM')
+        
+        # Create HTML part
+        html_part = MIMEText(conteudo, "html", "utf-8")
+        msg.attach(html_part)
+        
+        # Attach all files
+        if attachments:
+            for attachment in attachments:
+                try:
+                    # Read file data
+                    file_data = attachment.read()
+                    
+                    # Create MIME attachment
+                    mime_attachment = MIMEImage(file_data, _subtype='jpeg')  # Default to jpeg
+                    mime_attachment.add_header('Content-Disposition', 'attachment', filename=attachment.filename)
+                    
+                    # Attach to message
+                    msg.attach(mime_attachment)
+                    
+                    # Reset file pointer for potential future reads
+                    attachment.seek(0)
+                    
+                except Exception as attach_error:
+                    logger.error(f"Error attaching file {attachment.filename}: {str(attach_error)}")
+        
+        # Send email
         with smtplib.SMTP_SSL(app.config['SMTP_SERVER'], app.config['SMTP_PORT']) as server:
             server.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
             server.send_message(msg)
+        
+        logger.info(f"Email sent successfully to {destinatario} with {len(attachments) if attachments else 0} attachments")
         return True
+        
     except Exception as e:
         logger.error(f"Email personalizado failed: {str(e)}")
         return False
@@ -1024,6 +1069,15 @@ def edit_email_template():
                         f"Using full template for {nacionalidade}: {len(template_content[nacionalidade])} chars")
             logger.info(f"Loaded template from file for {nacionalidade} ({editing_template})")
 
+            # Check for custom template in database
+            try:
+                response = supabase.table("email_templates").select("*").eq("nacionalidade", nacionalidade).eq("tipo", editing_template).execute()
+                if response.data and response.data[0]['conteudo'].strip():
+                    template_content[nacionalidade] = response.data[0]['conteudo']
+                    logger.info(f"Loaded custom template from database for {nacionalidade}")
+            except Exception as db_error:
+                logger.error(f"Error loading custom template for {nacionalidade}: {str(db_error)}")
+
         except Exception as e:
             logger.error(f"Error getting template for {nacionalidade}: {str(e)}")
             template_content[
@@ -1117,26 +1171,27 @@ def marketing_emails():
                       'warning')
                 return redirect(url_for('marketing_emails'))
 
+            # Get file attachments
+            attachments = []
+            for key in request.files:
+                if key.startswith('attachment_'):
+                    file = request.files[key]
+                    if file and file.filename:
+                        attachments.append(file)
+
             # Send marketing email to all recipients
             emails_sent = 0
             failed_emails = []
 
             for email in all_emails:
                 try:
-                    # Create the email message
-                    msg = MIMEMultipart("alternative")
-                    msg['From'] = app.config['SMTP_USERNAME']
-                    msg['To'] = email
-                    msg['Subject'] = subject
-                    msg.attach(MIMEText(content, "html"))
-
-                    # Send the email
-                    with smtplib.SMTP_SSL(app.config['SMTP_SERVER'], app.config['SMTP_PORT']) as server:
-                        server.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
-                        server.send_message(msg)
-
-                    emails_sent += 1
-                    logger.info(f"Marketing email sent to {email}")
+                    # Send the email with attachments
+                    if enviar_email_personalizado_aux(email, subject, content, attachments):
+                        emails_sent += 1
+                        logger.info(f"Marketing email sent to {email}")
+                    else:
+                        failed_emails.append(email)
+                        logger.error(f"Failed to send marketing email to {email}")
 
                 except Exception as e:
                     failed_emails.append(email)

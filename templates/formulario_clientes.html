@@ -288,6 +288,25 @@
                     </div>
                     <div class="mb-3">
                         <label for="emailContent" class="form-label">Conteúdo do Email:</label>
+                        <div class="mb-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="attachImage()">
+                                <i class="fas fa-image"></i> Anexar Imagem
+                            </button>
+                            <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas fa-info-circle"></i> As imagens serão enviadas como anexos separados no email.
+                            </small>
+                        </div>
+                        <div id="attachmentList" class="mb-2" style="display: none;">
+                            <div class="card">
+                                <div class="card-header py-2">
+                                    <h6 class="mb-0"><i class="fas fa-paperclip"></i> Anexos</h6>
+                                </div>
+                                <div class="card-body py-2" id="attachmentItems">
+                                    <!-- Attachment items will be added here -->
+                                </div>
+                            </div>
+                        </div>
                         <div id="quillEditor" style="height: 300px;"></div>
                         <input type="hidden" id="emailContent" name="content">
                     </div>
@@ -445,6 +464,18 @@
 
     function openEmailModal(email, nome, nacionalidade) {
         console.log('openEmailModal called with:', email, nome, nacionalidade);
+        
+        // Ensure quill is initialized
+        if (typeof quill === 'undefined') {
+            console.error('Quill editor not initialized');
+            return;
+        }
+        
+        // Clear previous attachments
+        emailAttachments = [];
+        document.getElementById('attachmentItems').innerHTML = '';
+        document.getElementById('attachmentList').style.display = 'none';
+        
         document.getElementById('clienteEmail').value = email;
         // Set default subject based on nationality
         var defaultSubject = {
@@ -453,18 +484,35 @@
             'alemão': "Danke für Ihr Taucherlebnis",
         }[nacionalidade] || "Obrigado pela sua experiência de mergulho!";
         document.getElementById('emailSubject').value = defaultSubject;
+        
         // Load default email content based on nationality
         fetch(`/get-email-template/${email}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
-                quill.root.innerHTML = data.content;
+                if (quill && quill.root) {
+                    quill.root.innerHTML = data.content;
+                }
             })
             .catch(error => {
                 console.error('Error loading template:', error);
-                quill.root.innerHTML = `Olá ${nome},<br><br>Obrigado pela sua experiência de mergulho!<br><br>Atenciosamente,<br>Atlantic Diving Center`;
+                if (quill && quill.root) {
+                    quill.root.innerHTML = `Olá ${nome},<br><br>Obrigado pela sua experiência de mergulho!<br><br>Atenciosamente,<br>Atlantic Diving Center`;
+                }
             });
+            
         try {
-            var modal = new bootstrap.Modal(document.getElementById('emailModal'));
+            var modalElement = document.getElementById('emailModal');
+            if (!modalElement) {
+                console.error('Email modal element not found');
+                return;
+            }
+            
+            var modal = new bootstrap.Modal(modalElement);
             console.log('Modal created, showing...');
             modal.show();
             console.log('Modal show() called');
@@ -476,6 +524,12 @@
     function sendCustomEmail() {
         document.getElementById('emailContent').value = quill.root.innerHTML;
         var formData = new FormData(document.getElementById('emailForm'));
+        
+        // Add attachments to form data
+        emailAttachments.forEach((attachment, index) => {
+            formData.append(`attachment_${index}`, attachment.file);
+        });
+        
         fetch('/enviar-email-personalizado', {
             method: 'POST',
             body: formData
@@ -486,13 +540,24 @@
                     var modal = bootstrap.Modal.getInstance(document.getElementById('emailModal'));
                     modal.hide();
                     atualizarTabela();
+                } else if (response.status === 400) {
+                    // Check if it's because email was already sent
+                    response.text().then(text => {
+                        if (text.includes('Email já enviado')) {
+                            alert('Este email já foi enviado anteriormente.');
+                        } else {
+                            alert('Erro ao enviar email: ' + text);
+                        }
+                    });
                 } else {
-                    alert('Erro ao enviar email');
+                    response.text().then(text => {
+                        alert('Erro ao enviar email: ' + text);
+                    });
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Erro ao enviar email');
+                alert('Erro ao enviar email: ' + error.message);
             });
     }
 
@@ -502,6 +567,93 @@
             btn.getAttribute('data-nome'),
             btn.getAttribute('data-nacionalidade')
         );
+    }
+
+    // Global variable to store attachments
+    let emailAttachments = [];
+
+    function attachImage() {
+        const imageInput = document.getElementById('imageInput');
+        if (imageInput) {
+            imageInput.click();
+        } else {
+            console.error('Image input element not found');
+        }
+    }
+
+    function handleImageUpload(input) {
+        const file = input.files[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Por favor, selecione apenas arquivos de imagem.');
+                input.value = '';
+                return;
+            }
+            
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('A imagem deve ter menos de 5MB.');
+                input.value = '';
+                return;
+            }
+            
+            // Add file to attachments list
+            addAttachmentToList(file);
+        }
+        // Reset input
+        input.value = '';
+    }
+
+    function addAttachmentToList(file) {
+        const attachmentId = 'attachment_' + Date.now();
+        const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+        
+        // Add to attachments array
+        emailAttachments.push({
+            id: attachmentId,
+            file: file,
+            name: file.name,
+            size: fileSize,
+            type: file.type
+        });
+        
+        // Create attachment item HTML
+        const attachmentItem = document.createElement('div');
+        attachmentItem.className = 'attachment-item d-flex align-items-center justify-content-between p-2 border-bottom';
+        attachmentItem.id = attachmentId;
+        attachmentItem.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-image text-primary me-2"></i>
+                <div>
+                    <div class="fw-bold">${file.name}</div>
+                    <small class="text-muted">${fileSize}</small>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAttachment('${attachmentId}')">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        // Add to attachment list
+        document.getElementById('attachmentItems').appendChild(attachmentItem);
+        document.getElementById('attachmentList').style.display = 'block';
+    }
+
+    function removeAttachment(attachmentId) {
+        // Remove from attachments array
+        emailAttachments = emailAttachments.filter(att => att.id !== attachmentId);
+        
+        // Remove from DOM
+        const attachmentItem = document.getElementById(attachmentId);
+        if (attachmentItem) {
+            attachmentItem.remove();
+        }
+        
+        // Hide attachment list if empty
+        if (emailAttachments.length === 0) {
+            document.getElementById('attachmentList').style.display = 'none';
+        }
     }
 
     // Month filter functions

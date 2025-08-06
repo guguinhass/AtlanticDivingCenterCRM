@@ -8,7 +8,7 @@
         .editor-container {
             background: white;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
 
@@ -100,7 +100,7 @@
         }
 
         .list-card:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             transform: translateY(-2px);
         }
 
@@ -149,22 +149,20 @@
                 <div class="row" id="listsContainer">
                     {% if email_lists %}
                         {% for list in email_lists %}
-                            <div class="col-md-4 mb-3">
-                                <div class="list-card" onclick="loadList('{{ list.list_name }}')">
-                                    <h6 class="mb-1">{{ list.list_name }}</h6>
-                                    <small class="text-muted">{{ list.email_count }} emails</small>
-                                    <div class="mt-2">
-                                        <button class="btn btn-sm btn-outline-primary"
-                                                onclick="event.stopPropagation(); loadList('{{ list.list_name }}')">
-                                            <i class="fas fa-edit"></i> Editar
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger"
-                                                onclick="event.stopPropagation(); deleteList('{{ list.list_name }}')">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="list-card" onclick="loadList('{{ list.list_name }}')">
+                                <h6 class="mb-1">{{ list.list_name }}</h6>
+                                <small class="text-muted">{{ list.email_count }} emails</small>
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); loadList('{{ list.list_name }}')">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteList('{{ list.list_name }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
                             </div>
+                        </div>
                         {% endfor %}
                     {% else %}
                         <div class="col-12">
@@ -185,8 +183,7 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="form-label">Nome da Lista:</label>
-                            <input type="text" class="form-control" id="newListName"
-                                   placeholder="Ex: Newsletter Subscribers">
+                            <input type="text" class="form-control" id="newListName" placeholder="Ex: Newsletter Subscribers">
                         </div>
                         <button class="btn btn-primary" onclick="createNewList()">
                             <i class="fas fa-plus"></i> Criar Nova Lista
@@ -227,16 +224,16 @@
             <div class="table-responsive">
                 <table class="email-table" id="emailTable">
                     <thead>
-                    <tr>
-                        <th style="width: 50px;">#</th>
-                        <th style="width: 300px;">Email</th>
-                        <th style="width: 200px;">Nome (Opcional)</th>
-                        <th style="width: 150px;">Telefone (Opcional)</th>
-                        <th style="width: 100px;">Ações</th>
-                    </tr>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th style="width: 300px;">Email</th>
+                            <th style="width: 200px;">Nome (Opcional)</th>
+                            <th style="width: 150px;">Telefone (Opcional)</th>
+                            <th style="width: 100px;">Ações</th>
+                        </tr>
                     </thead>
                     <tbody id="emailTableBody">
-                    <!-- Rows will be added dynamically -->
+                        <!-- Rows will be added dynamically -->
                     </tbody>
                 </table>
             </div>
@@ -259,7 +256,7 @@
     let rowCounter = 0;
 
     // Initialize
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         setupAutoSave();
     });
 
@@ -293,23 +290,23 @@
     // Load existing list
     function loadList(listName) {
         fetch(`/api/marketing-list/${encodeURIComponent(listName)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(`Erro: ${data.error}`);
-                    return;
-                }
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(`Erro: ${data.error}`);
+                return;
+            }
 
-                currentList = data;
-                showEditor();
-                populateTable();
-                updateStats();
-                showStatus(`Lista "${listName}" carregada`, 'success');
-            })
-            .catch(error => {
-                console.error('Error loading list:', error);
-                alert('Erro ao carregar lista');
-            });
+            currentList = data;
+            showEditor();
+            populateTable();
+            updateStats();
+            showStatus(`Lista "${listName}" carregada`, 'success');
+        })
+        .catch(error => {
+            console.error('Error loading list:', error);
+            alert('Erro ao carregar lista');
+        });
     }
 
     // Show editor
@@ -352,18 +349,18 @@
         row.innerHTML = `
             <td>${index + 1}</td>
             <td>
-                <input type="email" class="form-control editable-cell" 
-                       value="${email}" 
+                <input type="email" class="form-control editable-cell"
+                       value="${email}"
                        onchange="updateEmail(${rowCounter}, this.value)"
                        placeholder="email@exemplo.com">
             </td>
             <td>
-                <input type="text" class="form-control editable-cell" 
+                <input type="text" class="form-control editable-cell"
                        onchange="updateName(${rowCounter}, this.value)"
                        placeholder="Nome (opcional)">
             </td>
             <td>
-                <input type="text" class="form-control editable-cell" 
+                <input type="text" class="form-control editable-cell"
                        onchange="updatePhone(${rowCounter}, this.value)"
                        placeholder="Telefone (opcional)">
             </td>
@@ -439,23 +436,23 @@
             },
             body: JSON.stringify(currentList)
         })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(`Erro: ${data.error}`);
-                    return;
-                }
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(`Erro: ${data.error}`);
+                return;
+            }
 
-                hasUnsavedChanges = false;
-                if (!isAutoSave) {
-                    showStatus(data.message, 'success');
-                }
-                updateStats();
-            })
-            .catch(error => {
-                console.error('Error saving list:', error);
-                alert('Erro ao salvar lista');
-            });
+            hasUnsavedChanges = false;
+            if (!isAutoSave) {
+                showStatus(data.message, 'success');
+            }
+            updateStats();
+        })
+        .catch(error => {
+            console.error('Error saving list:', error);
+            alert('Erro ao salvar lista');
+        });
     }
 
     // Delete list
@@ -467,20 +464,20 @@
         fetch(`/api/marketing-list/${encodeURIComponent(listName)}`, {
             method: 'DELETE'
         })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(`Erro: ${data.error}`);
-                    return;
-                }
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(`Erro: ${data.error}`);
+                return;
+            }
 
-                showStatus(data.message, 'success');
-                location.reload();
-            })
-            .catch(error => {
-                console.error('Error deleting list:', error);
-                alert('Erro ao remover lista');
-            });
+            showStatus(data.message, 'success');
+            location.reload();
+        })
+        .catch(error => {
+            console.error('Error deleting list:', error);
+            alert('Erro ao remover lista');
+        });
     }
 
     // Update stats
@@ -506,8 +503,8 @@
         const currentListStats = document.getElementById('currentListStats');
 
         statsText.innerHTML = `
-            <strong>${totalEmails}</strong> emails totais | 
-            <span class="text-success"><strong>${validEmails}</strong> válidos</span> | 
+            <strong>${totalEmails}</strong> emails totais |
+            <span class="text-success"><strong>${validEmails}</strong> válidos</span> |
             <span class="text-danger"><strong>${invalidEmails}</strong> inválidos</span>
         `;
 
@@ -540,9 +537,8 @@
         return emailRegex.test(email);
     }
 
-
     // Handle beforeunload
-    window.addEventListener('beforeunload', function (e) {
+    window.addEventListener('beforeunload', function(e) {
         if (hasUnsavedChanges) {
             e.preventDefault();
             e.returnValue = '';
