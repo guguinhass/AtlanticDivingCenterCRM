@@ -1449,8 +1449,14 @@ def save_marketing_list_api():
                     'email': email,
                     'created_at': datetime.now().isoformat()
                 })
-
             supabase.table("marketing_email_lists").insert(email_records).execute()
+        else:
+            # Insert a placeholder record for the list with no emails
+            supabase.table("marketing_email_lists").insert([{
+                'list_name': list_name,
+                'email': None,
+                'created_at': datetime.now().isoformat()
+            }]).execute()
 
         logger.info(f"Saved marketing list '{list_name}' with {len(valid_emails)} emails")
         return {
