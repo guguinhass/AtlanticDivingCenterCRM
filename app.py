@@ -155,30 +155,28 @@ def check_and_send_emails():
         logger.info(f"Checking emails for {len(clientes)} clients")
 
         for cliente in clientes:
-            # Double-check the email status to prevent race conditions
-            current_client = supabase.table("clientes").select("*").eq("email", cliente['email']).execute()
-            if not current_client.data:
-                continue
+            logger.info(f"Updating {cliente['email']} where primeiro_email_enviado == {False} (type: {type(False)})")
+            update_result = supabase.table("clientes") \
+                .update({"primeiro_email_enviado": True}) \
+                .eq("email", cliente['email']) \
+                .eq("primeiro_email_enviado", False) \
+                .execute()
+            logger.info(f"Update result for {cliente['email']}: {update_result}")
+            if update_result.data:
+                logger.info(f"SENDING: Sending first email to {cliente['email']}")
+                email_feedback(cliente, 'primeiro')
+                logger.info(f"SENT: First email sent successfully to {cliente['email']}")
 
-            current_cliente = current_client.data[0]
-            data_mergulho = datetime.strptime(current_cliente['data_mergulho'], '%Y-%m-%d').date()
+            # Second email logic
+            data_mergulho = datetime.strptime(cliente['data_mergulho'], '%Y-%m-%d').date()
             dias_passados = (hoje - data_mergulho).days
-
-            if dias_passados >= 1 and not current_cliente['primeiro_email_enviado']:
-                logger.info(f"SCHEDULED: Sending first email to {current_cliente['email']} (day {dias_passados})")
-                if email_feedback(current_cliente, 'primeiro'):
-                    supabase.table("clientes").update(
-                        {"primeiro_email_enviado": True}
-                    ).eq("email", current_cliente['email']).execute()
-                    logger.info(f"SCHEDULED: First email sent successfully to {current_cliente['email']}")
-
-            elif dias_passados >= 3 and not current_cliente['segundo_email_enviado']:
-                logger.info(f"SCHEDULED: Sending second email to {current_cliente['email']} (day {dias_passados})")
-                if email_feedback(current_cliente, 'segundo'):
+            if dias_passados >= 3 and not cliente['segundo_email_enviado']:
+                logger.info(f"SCHEDULED: Sending second email to {cliente['email']} (day {dias_passados})")
+                if email_feedback(cliente, 'segundo'):
                     supabase.table("clientes").update(
                         {"segundo_email_enviado": True}
-                    ).eq("email", current_cliente['email']).execute()
-                    logger.info(f"SCHEDULED: Second email sent successfully to {current_cliente['email']}")
+                    ).eq("email", cliente['email']).execute()
+                    logger.info(f"SCHEDULED: Second email sent successfully to {cliente['email']}")
 
         logger.info(f"=== SCHEDULED EMAIL CHECK COMPLETED ===")
 
@@ -468,48 +466,49 @@ def enviar_email_personalizado_aux(destinatario, assunto, conteudo, attachments=
         from email.mime.multipart import MIMEMultipart
         from email.mime.text import MIMEText
         from email.mime.image import MIMEImage
-        
+
         # Create multipart message
         msg = MIMEMultipart("mixed")
         msg['From'] = app.config['SMTP_USERNAME']
         msg['To'] = destinatario
         msg['Subject'] = assunto
-        
+
         # Add headers for better email client compatibility
         msg.add_header('X-Mailer', 'Atlantic Diving Center CRM')
-        
+
         # Create HTML part
         html_part = MIMEText(conteudo, "html", "utf-8")
         msg.attach(html_part)
-        
+
         # Attach all files
         if attachments:
             for attachment in attachments:
                 try:
                     # Read file data
                     file_data = attachment.read()
-                    
+
                     # Create MIME attachment
                     mime_attachment = MIMEImage(file_data, _subtype='jpeg')  # Default to jpeg
                     mime_attachment.add_header('Content-Disposition', 'attachment', filename=attachment.filename)
-                    
+
                     # Attach to message
                     msg.attach(mime_attachment)
-                    
+
                     # Reset file pointer for potential future reads
                     attachment.seek(0)
-                    
+
                 except Exception as attach_error:
                     logger.error(f"Error attaching file {attachment.filename}: {str(attach_error)}")
-        
+
         # Send email
         with smtplib.SMTP_SSL(app.config['SMTP_SERVER'], app.config['SMTP_PORT']) as server:
             server.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
             server.send_message(msg)
-        
-        logger.info(f"Email sent successfully to {destinatario} with {len(attachments) if attachments else 0} attachments")
+
+        logger.info(
+            f"Email sent successfully to {destinatario} with {len(attachments) if attachments else 0} attachments")
         return True
-        
+
     except Exception as e:
         logger.error(f"Email personalizado failed: {str(e)}")
         return False
@@ -533,21 +532,21 @@ def update_gastos():
     """Update gastos for a client (admin only)"""
     if not session.get('is_admin'):
         return {'success': False, 'error': 'Unauthorized'}, 403
-    
+
     try:
         data = request.get_json()
         email = data.get('email')
-        gastos = data.get('gastos', 0)
-        
+        gastos = data.get('gastos', 0.00)
+
         if not email:
             return {'success': False, 'error': 'Email is required'}
-        
+
         # Update the gastos field in the database
         supabase.table("clientes").update({"gastos": gastos}).eq("email", email).execute()
-        
+
         logger.info(f"Gastos updated for {email}: {gastos}")
         return {'success': True}
-        
+
     except Exception as e:
         logger.error(f"Error updating gastos: {str(e)}")
         return {'success': False, 'error': str(e)}
@@ -1071,7 +1070,8 @@ def edit_email_template():
 
             # Check for custom template in database
             try:
-                response = supabase.table("email_templates").select("*").eq("nacionalidade", nacionalidade).eq("tipo", editing_template).execute()
+                response = supabase.table("email_templates").select("*").eq("nacionalidade", nacionalidade).eq("tipo",
+                                                                                                               editing_template).execute()
                 if response.data and response.data[0]['conteudo'].strip():
                     template_content[nacionalidade] = response.data[0]['conteudo']
                     logger.info(f"Loaded custom template from database for {nacionalidade}")
@@ -1600,4 +1600,4 @@ def upload_marketing_emails_excel():
 
 if __name__ == '__main__':
     # Timer(3, open_browser).start()
-    app.run(debug=True)
+    app.run()

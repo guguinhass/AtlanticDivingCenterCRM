@@ -11,7 +11,10 @@
     <td>{{ "%.0f"|format(cliente.iva * 100) }}%</td>
     <td>{% if cliente.desconto %}{{ cliente.desconto }}%{% else %}0.0{% endif %}</td>
     {% if session.get('is_admin') %}
-    <td>{{ "%.2f"|format(cliente.gastos) if cliente.gastos else "0.00" }} €</td>
+    <td>
+        <input type="number" class="form-control form-control-sm gastos-input" value="{{ '%.2f'|format(cliente.gastos) if cliente.gastos else '0.00' }}" data-email="{{ cliente.email }}" style="width: 90px; display: inline-block;" min="0" step="0.01">
+        €
+    </td>
     {% endif %}
     <td>{{ cliente.nacionalidade.capitalize() }}</td>
     <td>{{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}</td>
@@ -36,3 +39,27 @@
     <td colspan="{% if session.get('is_admin') %}14{% else %}13{% endif %}" class="text-center">Nenhum cliente cadastrado</td>
 </tr>
 {% endfor %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.gastos-input').forEach(function(input) {
+        input.addEventListener('change', function() {
+            const email = this.getAttribute('data-email');
+            const gastos = parseFloat(this.value) || 0;
+            fetch('/update-gastos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, gastos })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Erro ao atualizar gastos: ' + (data.error || 'Erro desconhecido'));
+                }
+            })
+            .catch(() => alert('Erro ao atualizar gastos.'));
+        });
+    });
+});
+</script>
