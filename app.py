@@ -631,7 +631,7 @@ def exportar_emails():
             'Email Manual': 'Sim' if cliente["email_manual_enviado"] else 'Não',
             'Valor(€)': cliente["valor_fatura"],
             'Valor com Iva': cliente["valor_fatura"] * (1 + cliente["iva"]),
-            'IVA': cliente["valor_fatura"] * cliente["iva"],
+            'Valor de IVA': cliente["valor_fatura"] * cliente["iva"],
             'Desconto': cliente["desconto"],
             'Gastos(€)': cliente.get("gastos", 0) or 0
         } for cliente in clientes]
