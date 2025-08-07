@@ -677,7 +677,7 @@ def exportar_emails():
         logger.error(f"Erro ao exportar emails: {str(e)}")
         return redirect(url_for('index'))
 
-
+#--------------Get emails from excel files--------------
 @app.route('/upload-excel-emails', methods=['POST'])
 @login_required
 def upload_excel_emails():
@@ -741,7 +741,7 @@ def upload_excel_emails():
         logger.error(f"Error processing Excel file: {str(e)}")
         return redirect(url_for('marketing_emails'))
 
-
+#---------View collumns from excel files---------
 @app.route('/preview-excel-columns', methods=['POST'])
 @login_required
 def preview_excel_columns():
@@ -788,7 +788,7 @@ def preview_excel_columns():
         logger.error(f"Error previewing Excel file: {str(e)}")
         return {'error': f'Erro ao processar arquivo: {str(e)}'}, 500
 
-
+#---------Admin managing users-----------
 @app.route('/admin/users', methods=['GET', 'POST'])
 @login_required
 def manage_users():
@@ -970,7 +970,7 @@ def editar_segundo_email():
         flash('Erro ao abrir editor de email', 'danger')
         return redirect(url_for('index'))
 
-
+#-------------Edit templates---------------
 @app.route('/edit-email-template', methods=['GET', 'POST'])
 @login_required
 def edit_email_template():
@@ -1098,7 +1098,7 @@ def edit_email_template():
                            editing_template=editing_template,
                            template_status=template_status)
 
-
+#--------------Marketing emails functions---------------
 @app.route('/marketing-emails', methods=['GET', 'POST'])
 @login_required
 def marketing_emails():
@@ -1236,7 +1236,7 @@ def marketing_emails():
 
     return render_template('marketing_emails.html', client_count=client_count, email_lists=email_lists)
 
-
+#---------------Remove marketing emails-----------------
 @app.route('/clear-marketing-emails', methods=['POST'])
 @login_required
 def clear_marketing_emails():
@@ -1258,7 +1258,7 @@ def clear_marketing_emails():
 
     return redirect(url_for('marketing_emails'))
 
-
+#--------------Get email lists----------------
 @app.route('/get-marketing-email-lists', methods=['GET'])
 @login_required
 def get_marketing_email_lists():
@@ -1292,7 +1292,7 @@ def get_marketing_email_lists():
         logger.error(f"Error getting marketing email lists: {str(e)}")
         return {'error': f'Erro ao carregar listas: {str(e)}'}, 500
 
-
+#--------------Delete emails from marketing lists--------------
 @app.route('/delete-marketing-email-list', methods=['POST'])
 @login_required
 def delete_marketing_email_list():
@@ -1315,7 +1315,7 @@ def delete_marketing_email_list():
         logger.error(f"Error deleting marketing email list: {str(e)}")
         return {'error': f'Erro ao remover lista: {str(e)}'}, 500
 
-
+#-------------Editing marketing email lists----------------
 @app.route('/marketing-email-editor', methods=['GET'])
 @login_required
 def marketing_email_editor():
@@ -1350,7 +1350,7 @@ def marketing_email_editor():
 
     return render_template('marketing_email_editor.html', email_lists=email_lists)
 
-
+#---------Storing email lists----------
 @app.route('/api/marketing-lists', methods=['GET'])
 @login_required
 def get_marketing_lists_api():
@@ -1487,7 +1487,7 @@ def delete_marketing_list_api(list_name):
         logger.error(f"Error deleting marketing list API: {str(e)}")
         return {'error': f'Erro ao remover lista: {str(e)}'}, 500
 
-
+#-------------Upload emails from excel-------------
 @app.route('/upload-marketing-emails-excel', methods=['POST'])
 @login_required
 def upload_marketing_emails_excel():
@@ -1593,7 +1593,7 @@ def upload_marketing_emails_excel():
         logger.error(f"Error uploading marketing emails Excel: {str(e)}")
         return {'error': f'Erro ao processar arquivo: {str(e)}'}, 500
 
-
+#-------Starter--------
 if __name__ == '__main__':
     # Timer(3, open_browser).start()
     app.run()
