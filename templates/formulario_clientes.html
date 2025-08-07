@@ -112,7 +112,8 @@
 
         <div class="mb-3">
             <label class="form-label">IVA:</label>
-            <input type="number" name="iva" id="iva" class="form-control" min="0" max="100" step="0.01" value="22" required>
+            <input type="number" name="iva" id="iva" class="form-control" min="0" max="100" step="0.01" value="22"
+                   required>
             <div class="form-text">IVA a ser aplicado para este cliente (ex: 22 para 22%)</div>
         </div>
 
@@ -134,14 +135,14 @@
         </div>
 
         {% if session.get('is_admin') %}
-        <div class="mb-3">
-            <label class="form-label">Gastos (€):</label>
-            <div class="input-group">
-                <input type="number" step="0.01" name="gastos" id="gastos" class="form-control" min="0" 
-                       placeholder="0.00" value="0">
-                <span class="input-group-text">€</span>
+            <div class="mb-3">
+                <label class="form-label">Gastos (€):</label>
+                <div class="input-group">
+                    <input type="number" step="0.01" name="gastos" id="gastos" class="form-control" min="0"
+                           placeholder="0.00" value="0">
+                    <span class="input-group-text">€</span>
+                </div>
             </div>
-        </div>
         {% endif %}
 
         <div class="mb-3">
@@ -217,7 +218,7 @@
                 <th>IVA</th>
                 <th>Desconto (%)</th>
                 {% if session.get('is_admin') %}
-                <th>Gastos (€)</th>
+                    <th>Gastos (€)</th>
                 {% endif %}
                 <th>Nacionalidade</th>
                 <th>1º Email</th>
@@ -234,14 +235,23 @@
                     <td>{{ cliente.email }}</td>
                     <td>{{ cliente.num_mergulho }}</td>
                     <td>{{ cliente.formatted_date }}</td>
-                    <td>{{ "%.2f"|format(cliente.valor_fatura) }} €
-                        {% if cliente.desconto and cliente.desconto > 0 %}{% endif %}
-                    </td>
-                    <td>{{ "%.0f"|format(cliente.iva) }}%</td>
+                    <td>{{ "%.2f"|format(cliente.valor_fatura) }} €</td>
+                    <td>{{ "%.0f"|format(cliente.iva * 100) }}%</td>
                     <td>{% if cliente.desconto %}{{ cliente.desconto }}%{% else %}0.0{% endif %}</td>
+
                     {% if session.get('is_admin') %}
-                    <td>{{ "%.2f"|format(cliente.gastos) if cliente.gastos else "0.00" }} €</td>
+                        <td>
+                            <input type="number"
+                                   class="form-control form-control-sm gastos-input"
+                                   value="{{ '%.2f'|format(cliente.gastos) if cliente.gastos else '0.00' }}"
+                                   data-email="{{ cliente.email }}"
+                                   style="width: 90px; display: inline-block;"
+                                   min="0" step="0.01">
+                            €
+                            <button type="button" class="btn btn-primary px-4 guardar-btn">Guardar</button>
+                        </td>
                     {% endif %}
+
                     <td>{{ cliente.nacionalidade.capitalize() }}</td>
                     <td>{{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}</td>
                     <td>{{ 'Sim' if cliente.segundo_email_enviado else 'Não' }}</td>
@@ -262,366 +272,369 @@
                 </tr>
             {% else %}
                 <tr>
-                    <td colspan="{% if session.get('is_admin') %}14{% else %}13{% endif %}" class="text-center">Nenhum cliente cadastrado</td>
+                    <td colspan="{% if session.get('is_admin') %}14{% else %}13{% endif %}" class="text-center">
+                        Nenhum cliente cadastrado
+                    </td>
                 </tr>
             {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
 
-<!-- Email Edit Modal -->
-<div class="modal fade" id="emailModal" tabindex="-1" aria-labelledby="emailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="emailModalLabel">Editar Email</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="emailForm">
-                    <input type="hidden" id="clienteEmail" name="email">
-                    <div class="mb-3">
-                        <label for="emailSubject" class="form-label">Assunto:</label>
-                        <input type="text" class="form-control" id="emailSubject" name="subject" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="emailContent" class="form-label">Conteúdo do Email:</label>
-                        <div class="mb-2">
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="attachImage()">
-                                <i class="fas fa-image"></i> Anexar Imagem
+            <!-- Email Edit Modal -->
+            <div class="modal fade" id="emailModal" tabindex="-1" aria-labelledby="emailModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="emailModalLabel">Editar Email</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="emailForm">
+                                <input type="hidden" id="clienteEmail" name="email">
+                                <div class="mb-3">
+                                    <label for="emailSubject" class="form-label">Assunto:</label>
+                                    <input type="text" class="form-control" id="emailSubject" name="subject" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="emailContent" class="form-label">Conteúdo do Email:</label>
+                                    <div class="mb-2">
+                                        <button type="button" class="btn btn-outline-primary btn-sm"
+                                                onclick="attachImage()">
+                                            <i class="fas fa-image"></i> Anexar Imagem
+                                        </button>
+                                        <input type="file" id="imageInput" accept="image/*" style="display: none;"
+                                               onchange="handleImageUpload(this)">
+                                        <small class="text-muted d-block mt-1">
+                                            <i class="fas fa-info-circle"></i> As imagens serão enviadas como anexos
+                                            separados no
+                                            email.
+                                        </small>
+                                    </div>
+                                    <div id="attachmentList" class="mb-2" style="display: none;">
+                                        <div class="card">
+                                            <div class="card-header py-2">
+                                                <h6 class="mb-0"><i class="fas fa-paperclip"></i> Anexos</h6>
+                                            </div>
+                                            <div class="card-body py-2" id="attachmentItems">
+                                                <!-- Attachment items will be added here -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="quillEditor" style="height: 300px;"></div>
+                                    <input type="hidden" id="emailContent" name="content">
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-primary" onclick="sendCustomEmail()">Enviar Email
                             </button>
-                            <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
-                            <small class="text-muted d-block mt-1">
-                                <i class="fas fa-info-circle"></i> As imagens serão enviadas como anexos separados no email.
-                            </small>
                         </div>
-                        <div id="attachmentList" class="mb-2" style="display: none;">
-                            <div class="card">
-                                <div class="card-header py-2">
-                                    <h6 class="mb-0"><i class="fas fa-paperclip"></i> Anexos</h6>
-                                </div>
-                                <div class="card-body py-2" id="attachmentItems">
-                                    <!-- Attachment items will be added here -->
-                                </div>
-                            </div>
-                        </div>
-                        <div id="quillEditor" style="height: 300px;"></div>
-                        <input type="hidden" id="emailContent" name="content">
                     </div>
-                </form>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="sendCustomEmail()">Enviar Email</button>
+
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+            <div id="loading" class="text-center my-3" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p>Atualizando dados...</p>
             </div>
-        </div>
-    </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            <script>
 
-<div id="loading" class="text-center my-3" style="display: none;">
-    <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Carregando...</span>
-    </div>
-    <p>Atualizando dados...</p>
-</div>
+                function atualizarTabela() {
+                    document.getElementById('loading').style.display = 'block';
 
-<script>
+                    fetch('/atualizar-tabela')
+                        .then(response => {
+                            if (!response.ok) throw new Error('Erro na rede');
+                            return response.text();
+                        })
+                        .then(html => {
+                            document.querySelector('tbody').innerHTML = html;
+                            configurarEventosForms();
 
-    function atualizarTabela() {
-        document.getElementById('loading').style.display = 'block';
-
-        fetch('/atualizar-tabela')
-            .then(response => {
-                if (!response.ok) throw new Error('Erro na rede');
-                return response.text();
-            })
-            .then(html => {
-                document.querySelector('tbody').innerHTML = html;
-                configurarEventosForms();
-
-                // Re-apply current filter if one is active
-                var selectedMonth = document.getElementById('monthFilter').value;
-                if (selectedMonth && selectedMonth !== '') {
-                    filterByMonth();
+                            // Re-apply current filter if one is active
+                            var selectedMonth = document.getElementById('monthFilter').value;
+                            if (selectedMonth && selectedMonth !== '') {
+                                filterByMonth();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erro:', error);
+                        })
+                        .finally(() => {
+                            document.getElementById('loading').style.display = 'none';
+                        });
                 }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-            })
-            .finally(() => {
-                document.getElementById('loading').style.display = 'none';
-            });
-    }
 
 
-    function configurarEventosForms() {
+                function configurarEventosForms() {
 
-        document.querySelectorAll('.form-enviar').forEach(form => {
-            form.addEventListener('submit', function (e) {
-                e.preventDefault();
-                enviarFormulario(this);
-            });
-        });
+                    document.querySelectorAll('.form-enviar').forEach(form => {
+                        form.addEventListener('submit', function (e) {
+                            e.preventDefault();
+                            enviarFormulario(this);
+                        });
+                    });
 
 
-        document.querySelectorAll('.form-remover').forEach(form => {
-            form.addEventListener('submit', function (e) {
-                if (!confirm('Tem certeza que deseja remover este cliente?')) {
-                    e.preventDefault();
-                    return;
+                    document.querySelectorAll('.form-remover').forEach(form => {
+                        form.addEventListener('submit', function (e) {
+                            if (!confirm('Tem certeza que deseja remover este cliente?')) {
+                                e.preventDefault();
+                                return;
+                            }
+                            enviarFormulario(this);
+                        });
+                    });
                 }
-                enviarFormulario(this);
-            });
-        });
-    }
 
 
-    function enviarFormulario(form) {
-        fetch(form.action, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-            .then(response => {
-                if (response.redirected) {
-                    window.location.href = response.url;
-                } else {
+                function enviarFormulario(form) {
+                    fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                        .then(response => {
+                            if (response.redirected) {
+                                window.location.href = response.url;
+                            } else {
+                                atualizarTabela();
+                            }
+                        })
+                        .catch(error => console.error('Erro:', error));
+                }
+
+
+                setInterval(atualizarTabela, 10000);
+
+                document.addEventListener('DOMContentLoaded', function () {
+                    configurarEventosForms();
                     atualizarTabela();
-                }
-            })
-            .catch(error => console.error('Erro:', error));
-    }
+                    // Add confirmation for 'Enviar email para todos' form
+                    var enviarTodosForm = document.getElementById('enviar-todos-form');
+                    if (enviarTodosForm) {
+                        enviarTodosForm.addEventListener('submit', function (e) {
+                            if (!confirm('Deseja enviar email para TODOS os clientes?')) {
+                                e.preventDefault();
+                            }
+                        });
+                    }
+                    // IVA calculation logic
+                    var baseInput = document.getElementById('valor_fatura_base');
+                    var ivaInput = document.getElementById('iva');
+                    var ivaSpan = document.getElementById('valor_com_iva');
+                    var finalInput = document.getElementById('valor_fatura');
+                    var descontoInput = document.getElementById('desconto');
+                    var originalFinalValue = 0; // Store the original final value
 
+                    function updateIVA() {
+                        var base = parseFloat(baseInput.value) || 0;
+                        var iva = (parseFloat(ivaInput.value) || 22) / 100; // Now expects percentage
+                        var comIva = (base * (1 + iva)).toFixed(2);
+                        ivaSpan.textContent = comIva;
 
-    setInterval(atualizarTabela, 10000);
+                        var desconto = parseFloat(descontoInput.value) || 0;
 
-    document.addEventListener('DOMContentLoaded', function () {
-        configurarEventosForms();
-        atualizarTabela();
-        // Add confirmation for 'Enviar email para todos' form
-        var enviarTodosForm = document.getElementById('enviar-todos-form');
-        if (enviarTodosForm) {
-            enviarTodosForm.addEventListener('submit', function (e) {
-                if (!confirm('Deseja enviar email para TODOS os clientes?')) {
-                    e.preventDefault();
-                }
-            });
-        }
-        // IVA calculation logic
-        var baseInput = document.getElementById('valor_fatura_base');
-        var ivaInput = document.getElementById('iva');
-        var ivaSpan = document.getElementById('valor_com_iva');
-        var finalInput = document.getElementById('valor_fatura');
-        var descontoInput = document.getElementById('desconto');
-        var originalFinalValue = 0; // Store the original final value
+                        // Only update the final value if it's completely empty (first time) or if base/IVA changed
+                        var currentFinalValue = parseFloat(finalInput.value);
+                        if (isNaN(currentFinalValue) || baseInput.value !== baseInput.dataset.lastBase || ivaInput.value !== ivaInput.dataset.lastIva) {
+                            originalFinalValue = parseFloat(comIva);
+                            finalInput.value = comIva;
+                            baseInput.dataset.lastBase = baseInput.value;
+                            ivaInput.dataset.lastIva = ivaInput.value;
+                        }
 
-        function updateIVA() {
-            var base = parseFloat(baseInput.value) || 0;
-            var iva = (parseFloat(ivaInput.value) || 22) / 100; // Now expects percentage
-            var comIva = (base * (1 + iva)).toFixed(2);
-            ivaSpan.textContent = comIva;
+                        // Apply discount to the original final value
+                        var valorFinal = originalFinalValue;
+                        if (desconto > 0 && desconto < 100) {
+                            valorFinal = (originalFinalValue * (1 - desconto / 100)).toFixed(2);
+                        }
+                        finalInput.value = valorFinal;
+                    }
 
-            var desconto = parseFloat(descontoInput.value) || 0;
-
-            // Only update the final value if it's completely empty (first time) or if base/IVA changed
-            var currentFinalValue = parseFloat(finalInput.value);
-            if (isNaN(currentFinalValue) || baseInput.value !== baseInput.dataset.lastBase || ivaInput.value !== ivaInput.dataset.lastIva) {
-                originalFinalValue = parseFloat(comIva);
-                finalInput.value = comIva;
-                baseInput.dataset.lastBase = baseInput.value;
-                ivaInput.dataset.lastIva = ivaInput.value;
-            }
-
-            // Apply discount to the original final value
-            var valorFinal = originalFinalValue;
-            if (desconto > 0 && desconto < 100) {
-                valorFinal = (originalFinalValue * (1 - desconto / 100)).toFixed(2);
-            }
-            finalInput.value = valorFinal;
-        }
-
-        baseInput.addEventListener('input', updateIVA);
-        ivaInput.addEventListener('input', updateIVA);
-        descontoInput.addEventListener('input', updateIVA);
-        finalInput.addEventListener('input', function () {
-            // When user manually changes the final value, update the original value
-            var newValue = parseFloat(this.value);
-            if (!isNaN(newValue)) {
-                originalFinalValue = newValue;
-            }
-        });
-        updateIVA();
-        // Initialize Quill
-        quill = new Quill('#quillEditor', {
-            theme: 'snow'
-        });
-    });
-
-    function openEmailModal(email, nome, nacionalidade) {
-        console.log('openEmailModal called with:', email, nome, nacionalidade);
-        
-        // Ensure quill is initialized
-        if (typeof quill === 'undefined') {
-            console.error('Quill editor not initialized');
-            return;
-        }
-        
-        // Clear previous attachments
-        emailAttachments = [];
-        document.getElementById('attachmentItems').innerHTML = '';
-        document.getElementById('attachmentList').style.display = 'none';
-        
-        document.getElementById('clienteEmail').value = email;
-        // Set default subject based on nationality
-        var defaultSubject = {
-            'inglês': "Thank you for your diving experience!",
-            'francês': "Merci d'avoir plongé avec nous",
-            'alemão': "Danke für Ihr Taucherlebnis",
-        }[nacionalidade] || "Obrigado pela sua experiência de mergulho!";
-        document.getElementById('emailSubject').value = defaultSubject;
-        
-        // Load default email content based on nationality
-        fetch(`/get-email-template/${email}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (quill && quill.root) {
-                    quill.root.innerHTML = data.content;
-                }
-            })
-            .catch(error => {
-                console.error('Error loading template:', error);
-                if (quill && quill.root) {
-                    quill.root.innerHTML = `Olá ${nome},<br><br>Obrigado pela sua experiência de mergulho!<br><br>Atenciosamente,<br>Atlantic Diving Center`;
-                }
-            });
-            
-        try {
-            var modalElement = document.getElementById('emailModal');
-            if (!modalElement) {
-                console.error('Email modal element not found');
-                return;
-            }
-            
-            var modal = new bootstrap.Modal(modalElement);
-            console.log('Modal created, showing...');
-            modal.show();
-            console.log('Modal show() called');
-        } catch (error) {
-            console.error('Error creating/showing modal:', error);
-        }
-    }
-
-    function sendCustomEmail() {
-        document.getElementById('emailContent').value = quill.root.innerHTML;
-        var formData = new FormData(document.getElementById('emailForm'));
-        
-        // Add attachments to form data
-        emailAttachments.forEach((attachment, index) => {
-            formData.append(`attachment_${index}`, attachment.file);
-        });
-        
-        fetch('/enviar-email-personalizado', {
-            method: 'POST',
-            body: formData
-        })
-            .then(response => {
-                if (response.ok) {
-                    alert('Email enviado com sucesso!');
-                    var modal = bootstrap.Modal.getInstance(document.getElementById('emailModal'));
-                    modal.hide();
-                    atualizarTabela();
-                } else if (response.status === 400) {
-                    // Check if it's because email was already sent
-                    response.text().then(text => {
-                        if (text.includes('Email já enviado')) {
-                            alert('Este email já foi enviado anteriormente.');
-                        } else {
-                            alert('Erro ao enviar email: ' + text);
+                    baseInput.addEventListener('input', updateIVA);
+                    ivaInput.addEventListener('input', updateIVA);
+                    descontoInput.addEventListener('input', updateIVA);
+                    finalInput.addEventListener('input', function () {
+                        // When user manually changes the final value, update the original value
+                        var newValue = parseFloat(this.value);
+                        if (!isNaN(newValue)) {
+                            originalFinalValue = newValue;
                         }
                     });
-                } else {
-                    response.text().then(text => {
-                        alert('Erro ao enviar email: ' + text);
+                    updateIVA();
+                    // Initialize Quill
+                    quill = new Quill('#quillEditor', {
+                        theme: 'snow'
                     });
+                });
+
+                function openEmailModal(email, nome, nacionalidade) {
+                    console.log('openEmailModal called with:', email, nome, nacionalidade);
+
+                    // Ensure quill is initialized
+                    if (typeof quill === 'undefined') {
+                        console.error('Quill editor not initialized');
+                        return;
+                    }
+
+                    // Clear previous attachments
+                    emailAttachments = [];
+                    document.getElementById('attachmentItems').innerHTML = '';
+                    document.getElementById('attachmentList').style.display = 'none';
+
+                    document.getElementById('clienteEmail').value = email;
+                    // Set default subject based on nationality
+                    var defaultSubject = {
+                        'inglês': "Thank you for your diving experience!",
+                        'francês': "Merci d'avoir plongé avec nous",
+                        'alemão': "Danke für Ihr Taucherlebnis",
+                    }[nacionalidade] || "Obrigado pela sua experiência de mergulho!";
+                    document.getElementById('emailSubject').value = defaultSubject;
+
+                    // Load default email content based on nationality
+                    fetch(`/get-email-template/${email}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (quill && quill.root) {
+                                quill.root.innerHTML = data.content;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error loading template:', error);
+                            if (quill && quill.root) {
+                                quill.root.innerHTML = `Olá ${nome},<br><br>Obrigado pela sua experiência de mergulho!<br><br>Atenciosamente,<br>Atlantic Diving Center`;
+                            }
+                        });
+
+                    try {
+                        var modalElement = document.getElementById('emailModal');
+                        if (!modalElement) {
+                            console.error('Email modal element not found');
+                            return;
+                        }
+
+                        var modal = new bootstrap.Modal(modalElement);
+                        console.log('Modal created, showing...');
+                        modal.show();
+                        console.log('Modal show() called');
+                    } catch (error) {
+                        console.error('Error creating/showing modal:', error);
+                    }
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Erro ao enviar email: ' + error.message);
-            });
-    }
 
-    function openEmailModalFromButton(btn) {
-        openEmailModal(
-            btn.getAttribute('data-email'),
-            btn.getAttribute('data-nome'),
-            btn.getAttribute('data-nacionalidade')
-        );
-    }
+                function sendCustomEmail() {
+                    document.getElementById('emailContent').value = quill.root.innerHTML;
+                    var formData = new FormData(document.getElementById('emailForm'));
 
-    // Global variable to store attachments
-    let emailAttachments = [];
+                    // Add attachments to form data
+                    emailAttachments.forEach((attachment, index) => {
+                        formData.append(`attachment_${index}`, attachment.file);
+                    });
 
-    function attachImage() {
-        const imageInput = document.getElementById('imageInput');
-        if (imageInput) {
-            imageInput.click();
-        } else {
-            console.error('Image input element not found');
-        }
-    }
+                    fetch('/enviar-email-personalizado', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(response => {
+                            if (response.ok) {
+                                alert('Email enviado com sucesso!');
+                                var modal = bootstrap.Modal.getInstance(document.getElementById('emailModal'));
+                                modal.hide();
+                                atualizarTabela();
+                            } else if (response.status === 400) {
+                                // Check if it's because email was already sent
+                                response.text().then(text => {
+                                    if (text.includes('Email já enviado')) {
+                                        alert('Este email já foi enviado anteriormente.');
+                                    } else {
+                                        alert('Erro ao enviar email: ' + text);
+                                    }
+                                });
+                            } else {
+                                response.text().then(text => {
+                                    alert('Erro ao enviar email: ' + text);
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Erro ao enviar email: ' + error.message);
+                        });
+                }
 
-    function handleImageUpload(input) {
-        const file = input.files[0];
-        if (file) {
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                alert('Por favor, selecione apenas arquivos de imagem.');
-                input.value = '';
-                return;
-            }
-            
-            // Validate file size (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                alert('A imagem deve ter menos de 5MB.');
-                input.value = '';
-                return;
-            }
-            
-            // Add file to attachments list
-            addAttachmentToList(file);
-        }
-        // Reset input
-        input.value = '';
-    }
+                function openEmailModalFromButton(btn) {
+                    openEmailModal(
+                        btn.getAttribute('data-email'),
+                        btn.getAttribute('data-nome'),
+                        btn.getAttribute('data-nacionalidade')
+                    );
+                }
 
-    function addAttachmentToList(file) {
-        const attachmentId = 'attachment_' + Date.now();
-        const fileSize = (file.size / 1024).toFixed(1) + ' KB';
-        
-        // Add to attachments array
-        emailAttachments.push({
-            id: attachmentId,
-            file: file,
-            name: file.name,
-            size: fileSize,
-            type: file.type
-        });
-        
-        // Create attachment item HTML
-        const attachmentItem = document.createElement('div');
-        attachmentItem.className = 'attachment-item d-flex align-items-center justify-content-between p-2 border-bottom';
-        attachmentItem.id = attachmentId;
-        attachmentItem.innerHTML = `
+                // Global variable to store attachments
+                let emailAttachments = [];
+
+                function attachImage() {
+                    const imageInput = document.getElementById('imageInput');
+                    if (imageInput) {
+                        imageInput.click();
+                    } else {
+                        console.error('Image input element not found');
+                    }
+                }
+
+                function handleImageUpload(input) {
+                    const file = input.files[0];
+                    if (file) {
+                        // Validate file type
+                        if (!file.type.startsWith('image/')) {
+                            alert('Por favor, selecione apenas arquivos de imagem.');
+                            input.value = '';
+                            return;
+                        }
+
+                        // Validate file size (max 5MB)
+                        if (file.size > 5 * 1024 * 1024) {
+                            alert('A imagem deve ter menos de 5MB.');
+                            input.value = '';
+                            return;
+                        }
+
+                        // Add file to attachments list
+                        addAttachmentToList(file);
+                    }
+                    // Reset input
+                    input.value = '';
+                }
+
+                function addAttachmentToList(file) {
+                    const attachmentId = 'attachment_' + Date.now();
+                    const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+
+                    // Add to attachments array
+                    emailAttachments.push({
+                        id: attachmentId,
+                        file: file,
+                        name: file.name,
+                        size: fileSize,
+                        type: file.type
+                    });
+
+                    // Create attachment item HTML
+                    const attachmentItem = document.createElement('div');
+                    attachmentItem.className = 'attachment-item d-flex align-items-center justify-content-between p-2 border-bottom';
+                    attachmentItem.id = attachmentId;
+                    attachmentItem.innerHTML = `
             <div class="d-flex align-items-center">
                 <i class="fas fa-image text-primary me-2"></i>
                 <div>
@@ -633,93 +646,134 @@
                 <i class="fas fa-times"></i>
             </button>
         `;
-        
-        // Add to attachment list
-        document.getElementById('attachmentItems').appendChild(attachmentItem);
-        document.getElementById('attachmentList').style.display = 'block';
-    }
 
-    function removeAttachment(attachmentId) {
-        // Remove from attachments array
-        emailAttachments = emailAttachments.filter(att => att.id !== attachmentId);
-        
-        // Remove from DOM
-        const attachmentItem = document.getElementById(attachmentId);
-        if (attachmentItem) {
-            attachmentItem.remove();
-        }
-        
-        // Hide attachment list if empty
-        if (emailAttachments.length === 0) {
-            document.getElementById('attachmentList').style.display = 'none';
-        }
-    }
+                    // Add to attachment list
+                    document.getElementById('attachmentItems').appendChild(attachmentItem);
+                    document.getElementById('attachmentList').style.display = 'block';
+                }
 
-    // Month filter functions
-    function toggleFilterPanel() {
-        var filterPanel = document.getElementById('filterPanel');
-        if (filterPanel.style.display === 'none') {
-            filterPanel.style.display = 'block';
-        } else {
-            filterPanel.style.display = 'none';
-        }
-    }
+                function removeAttachment(attachmentId) {
+                    // Remove from attachments array
+                    emailAttachments = emailAttachments.filter(att => att.id !== attachmentId);
 
-    function filterByMonth() {
-        var selectedMonth = document.getElementById('monthFilter').value;
-        var tableRows = document.querySelectorAll('tbody tr');
+                    // Remove from DOM
+                    const attachmentItem = document.getElementById(attachmentId);
+                    if (attachmentItem) {
+                        attachmentItem.remove();
+                    }
 
-        tableRows.forEach(function (row) {
-            var dateCell = row.querySelector('td:nth-child(5)'); // Date column
-            if (dateCell) {
-                var dateText = dateCell.textContent.trim();
-                // Parse date in dd/mm/yyyy format
-                var dateParts = dateText.split('/');
-                if (dateParts.length === 3) {
-                    var day = parseInt(dateParts[0]);
-                    var month = parseInt(dateParts[1]);
-                    var year = parseInt(dateParts[2]);
-                    var rowMonth = month.toString().padStart(2, '0');
-
-                    if (selectedMonth === '' || rowMonth === selectedMonth) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
+                    // Hide attachment list if empty
+                    if (emailAttachments.length === 0) {
+                        document.getElementById('attachmentList').style.display = 'none';
                     }
                 }
-            }
-        });
 
-        // Update row count
-        updateRowCount();
-    }
+                // Month filter functions
+                function toggleFilterPanel() {
+                    var filterPanel = document.getElementById('filterPanel');
+                    if (filterPanel.style.display === 'none') {
+                        filterPanel.style.display = 'block';
+                    } else {
+                        filterPanel.style.display = 'none';
+                    }
+                }
 
-    function clearFilter() {
-        document.getElementById('monthFilter').value = '';
-        var tableRows = document.querySelectorAll('tbody tr');
-        tableRows.forEach(function (row) {
-            row.style.display = '';
-        });
-        updateRowCount();
-    }
+                function filterByMonth() {
+                    var selectedMonth = document.getElementById('monthFilter').value;
+                    var tableRows = document.querySelectorAll('tbody tr');
 
-    function updateRowCount() {
-        var visibleRows = document.querySelectorAll('tbody tr:not([style*="display: none"])').length;
-        var totalRows = document.querySelectorAll('tbody tr').length;
+                    tableRows.forEach(function (row) {
+                        var dateCell = row.querySelector('td:nth-child(5)'); // Date column
+                        if (dateCell) {
+                            var dateText = dateCell.textContent.trim();
+                            // Parse date in dd/mm/yyyy format
+                            var dateParts = dateText.split('/');
+                            if (dateParts.length === 3) {
+                                var day = parseInt(dateParts[0]);
+                                var month = parseInt(dateParts[1]);
+                                var year = parseInt(dateParts[2]);
+                                var rowMonth = month.toString().padStart(2, '0');
 
-        // You can add a counter display here if needed
-        console.log('Visible rows: ' + visibleRows + ' of ' + totalRows);
-    }
+                                if (selectedMonth === '' || rowMonth === selectedMonth) {
+                                    row.style.display = '';
+                                } else {
+                                    row.style.display = 'none';
+                                }
+                            }
+                        }
+                    });
+
+                    // Update row count
+                    updateRowCount();
+                }
+
+                function clearFilter() {
+                    document.getElementById('monthFilter').value = '';
+                    var tableRows = document.querySelectorAll('tbody tr');
+                    tableRows.forEach(function (row) {
+                        row.style.display = '';
+                    });
+                    updateRowCount();
+                }
+
+                function updateRowCount() {
+                    var visibleRows = document.querySelectorAll('tbody tr:not([style*="display: none"])').length;
+                    var totalRows = document.querySelectorAll('tbody tr').length;
+
+                    // You can add a counter display here if needed
+                    console.log('Visible rows: ' + visibleRows + ' of ' + totalRows);
+                }
 
 
+                // Auto-filter when month is selected
+                document.addEventListener('DOMContentLoaded', function () {
+                    var monthFilter = document.getElementById('monthFilter');
+                    if (monthFilter) {
+                        monthFilter.addEventListener('change', filterByMonth);
+                    }
+                });
 
-    // Auto-filter when month is selected
-    document.addEventListener('DOMContentLoaded', function () {
-        var monthFilter = document.getElementById('monthFilter');
-        if (monthFilter) {
-            monthFilter.addEventListener('change', filterByMonth);
-        }
-    });
-</script>
+
+                document.addEventListener('DOMContentLoaded', function () {
+                    console.log("Script carregado!");
+
+                    document.body.addEventListener('click', async function (event) {
+                        if (event.target.classList.contains('guardar-btn')) {
+                            console.log("Botão clicado!");
+
+                            const td = event.target.closest('td');
+                            const input = td.querySelector('.gastos-input');
+                            const email = input.dataset.email;
+                            const gastos = parseFloat(input.value);
+
+                            try {
+                                const response = await fetch('/update-gastos', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({email, gastos})
+                                });
+
+                                const result = await response.json();
+                                console.log("Resposta do servidor:", result);
+
+                                if (result.success) {
+                                    alert('✅ Gastos atualizados com sucesso!');
+                                } else {
+                                    alert('❌ Erro ao atualizar: ' + result.error);
+                                }
+                            } catch (error) {
+                                alert('❌ Erro na requisição: ' + error.message);
+                            }
+                        }
+                    });
+                });
+            </script>
+
+            </tbody>
+        </table>
+    </div>
+</div>
 </body>
 </html>

@@ -6,7 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="ecc8d2d0-dffe-4cab-967b-a29a2741a503" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/formulario_clientes.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/formulario_clientes.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templates/partials/tabela_clientes.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/partials/tabela_clientes.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -177,7 +177,7 @@
       <workItem from="1753949268864" duration="10674000" />
       <workItem from="1754295383668" duration="15269000" />
       <workItem from="1754381102226" duration="14170000" />
-      <workItem from="1754471377156" duration="15620000" />
+      <workItem from="1754471377156" duration="17953000" />
     </task>
     <servers />
   </component>

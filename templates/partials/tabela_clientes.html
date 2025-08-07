@@ -5,17 +5,23 @@
     <td>{{ cliente.email }}</td>
     <td>{{ cliente.num_mergulho }}</td>
     <td>{{ cliente.formatted_date }}</td>
-    <td>{{ "%.2f"|format(cliente.valor_fatura) }} €
-        {% if cliente.desconto and cliente.desconto > 0 %}{% endif %}
-    </td>
+    <td>{{ "%.2f"|format(cliente.valor_fatura) }} €</td>
     <td>{{ "%.0f"|format(cliente.iva * 100) }}%</td>
     <td>{% if cliente.desconto %}{{ cliente.desconto }}%{% else %}0.0{% endif %}</td>
+
     {% if session.get('is_admin') %}
     <td>
-        <input type="number" class="form-control form-control-sm gastos-input" value="{{ '%.2f'|format(cliente.gastos) if cliente.gastos else '0.00' }}" data-email="{{ cliente.email }}" style="width: 90px; display: inline-block;" min="0" step="0.01">
+        <input type="number"
+               class="form-control form-control-sm gastos-input"
+               value="{{ '%.2f'|format(cliente.gastos) if cliente.gastos else '0.00' }}"
+               data-email="{{ cliente.email }}"
+               style="width: 90px; display: inline-block;"
+               min="0" step="0.01">
         €
+        <button type="button" class="btn btn-primary px-4 guardar-btn">Guardar</button>
     </td>
     {% endif %}
+
     <td>{{ cliente.nacionalidade.capitalize() }}</td>
     <td>{{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}</td>
     <td>{{ 'Sim' if cliente.segundo_email_enviado else 'Não' }}</td>
@@ -36,30 +42,9 @@
 </tr>
 {% else %}
 <tr>
-    <td colspan="{% if session.get('is_admin') %}14{% else %}13{% endif %}" class="text-center">Nenhum cliente cadastrado</td>
+    <td colspan="{% if session.get('is_admin') %}14{% else %}13{% endif %}" class="text-center">
+        Nenhum cliente cadastrado
+    </td>
 </tr>
 {% endfor %}
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.gastos-input').forEach(function(input) {
-        input.addEventListener('change', function() {
-            const email = this.getAttribute('data-email');
-            const gastos = parseFloat(this.value) || 0;
-            fetch('/update-gastos', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ email, gastos })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    alert('Erro ao atualizar gastos: ' + (data.error || 'Erro desconhecido'));
-                }
-            })
-            .catch(() => alert('Erro ao atualizar gastos.'));
-        });
-    });
-});
-</script>
+
