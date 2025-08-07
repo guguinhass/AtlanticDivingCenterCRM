@@ -155,21 +155,17 @@ def check_and_send_emails():
         logger.info(f"Checking emails for {len(clientes)} clients")
 
         for cliente in clientes:
-            logger.info(f"Updating {cliente['email']} where primeiro_email_enviado == {False} (type: {type(False)})")
-            update_result = supabase.table("clientes") \
-                .update({"primeiro_email_enviado": True}) \
-                .eq("email", cliente['email']) \
-                .eq("primeiro_email_enviado", False) \
-                .execute()
-            logger.info(f"Update result for {cliente['email']}: {update_result}")
-            if update_result.data:
-                logger.info(f"SENDING: Sending first email to {cliente['email']}")
-                email_feedback(cliente, 'primeiro')
-                logger.info(f"SENT: First email sent successfully to {cliente['email']}")
-
-            # Second email logic
             data_mergulho = datetime.strptime(cliente['data_mergulho'], '%Y-%m-%d').date()
             dias_passados = (hoje - data_mergulho).days
+
+            if dias_passados >= 1 and not cliente['primeiro_email_enviado']:
+                logger.info(f"SENDING: Sending first email to {cliente['email']}")
+                email_feedback(cliente, 'primeiro')
+                supabase.table("clientes").update(
+                    {"primeiro_email_enviado": True}
+                ).eq("email", cliente['email']).execute()
+                logger.info(f"SENT: First email sent successfully to {cliente['email']}")
+
             if dias_passados >= 3 and not cliente['segundo_email_enviado']:
                 logger.info(f"SCHEDULED: Sending second email to {cliente['email']} (day {dias_passados})")
                 if email_feedback(cliente, 'segundo'):
