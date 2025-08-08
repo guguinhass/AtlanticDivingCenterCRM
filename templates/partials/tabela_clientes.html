@@ -1,50 +1,59 @@
 {% for cliente in clientes %}
-<tr>
-    <td>{{ cliente.adicionado_por if cliente.adicionado_por else 'Desconhecido' }}</td>
-    <td>{{ cliente.nome }}</td>
-    <td>{{ cliente.email }}</td>
-    <td>{{ cliente.num_mergulho }}</td>
-    <td>{{ cliente.formatted_date }}</td>
-    <td>{{ "%.2f"|format(cliente.valor_fatura) }} €</td>
-    <td>{{ "%.0f"|format(cliente.iva * 100) }}%</td>
-    <td>{% if cliente.desconto %}{{ cliente.desconto }}%{% else %}0.0{% endif %}</td>
+    <tr>
+        <td>{{ cliente.adicionado_por if cliente.adicionado_por else 'Desconhecido' }}</td>
+        <td>{{ cliente.nome }}</td>
+        <td>{{ cliente.email }}</td>
+        <td>{{ cliente.num_mergulho }}</td>
+        <td>{{ cliente.formatted_date }}</td>
+        <td>{{ "%.2f"|format(cliente.valor_fatura) }} €</td>
+        <td>{{ "%.0f"|format(cliente.iva * 100) }}%</td>
+        <td>{% if cliente.desconto %}{{ cliente.desconto }}%{% else %}0.0{% endif %}</td>
 
-    {% if session.get('is_admin') %}
-    <td>
-        <input type="number"
-               class="form-control form-control-sm gastos-input"
-               value="{{ '%.2f'|format(cliente.gastos) if cliente.gastos else '0.00' }}"
-               data-email="{{ cliente.email }}"
-               style="width: 90px; display: inline-block;"
-               min="0" step="0.01">
-        €
-        <button type="button" class="btn btn-primary px-4 guardar-btn">Guardar</button>
-    </td>
-    {% endif %}
+        {% if session.get('is_admin') %}
+            <td>
+                <input type="number"
+                       class="form-control form-control-sm gastos-input"
+                       value="{{ '%.2f'|format(cliente.gastos) if cliente.gastos else '0.00' }}"
+                       data-email="{{ cliente.email }}"
+                       style="width: 90px; display: inline-block;"
+                       min="0" step="0.01">
+                €
+                <button type="button" class="btn btn-primary px-4 guardar-btn">Guardar</button>
+            </td>
+            <td>{{ cliente.receita }} € </td>
+        {% endif %}
 
-    <td>{{ cliente.nacionalidade.capitalize() }}</td>
-    <td>{{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}</td>
-    <td>{{ 'Sim' if cliente.segundo_email_enviado else 'Não' }}</td>
-    <td>{{ 'Sim' if cliente.email_manual_enviado else 'Não' }}</td>
-    <td class="d-flex gap-2">
-        <button type="button" class="btn btn-sm btn-success"
-                data-email="{{ cliente.email }}"
-                data-nome="{{ cliente.nome }}"
-                data-nacionalidade="{{ cliente.nacionalidade }}"
-                onclick="openEmailModalFromButton(this)">
-            Enviar Email
-        </button>
-        <form action="{{ url_for('remover_cliente', email=cliente.email) }}" method="post"
-              onsubmit="return confirm('Tem certeza que deseja remover {{ cliente.nome }}?');">
-            <button type="submit" class="btn btn-sm btn-danger">Remover Cliente</button>
-        </form>
-    </td>
-</tr>
+        <td>{{ cliente.nacionalidade.capitalize() }}</td>
+        <td>{{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}</td>
+        <td>{{ 'Sim' if cliente.segundo_email_enviado else 'Não' }}</td>
+        <td>
+            {{ 'Sim' if cliente.email_manual_enviado else 'Não' }}
+            <form action="{{ url_for('marcar_email_manual', email=cliente.email) }}" method="post"
+                  onsubmit="return confirm('Tem certeza que deseja marcar o email de {{ cliente.nome }} como enviado?');">
+                <button type="submit" class="btn btn-sm btn-primary">
+                    Marcar como enviado
+                </button>
+            </form>
+        </td>
+        <td class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-success"
+                    data-email="{{ cliente.email }}"
+                    data-nome="{{ cliente.nome }}"
+                    data-nacionalidade="{{ cliente.nacionalidade }}"
+                    onclick="openEmailModalFromButton(this)">
+                Enviar Email
+            </button>
+            <form action="{{ url_for('remover_cliente', email=cliente.email) }}" method="post"
+                  onsubmit="return confirm('Tem certeza que deseja remover {{ cliente.nome }}?');">
+                <button type="submit" class="btn btn-sm btn-danger">Remover Cliente</button>
+            </form>
+        </td>
+    </tr>
 {% else %}
-<tr>
-    <td colspan="{% if session.get('is_admin') %}14{% else %}13{% endif %}" class="text-center">
-        Nenhum cliente cadastrado
-    </td>
-</tr>
+    <tr>
+        <td colspan="{% if session.get('is_admin') %}14{% else %}13{% endif %}" class="text-center">
+            Nenhum cliente cadastrado
+        </td>
+    </tr>
 {% endfor %}
 

@@ -335,6 +335,7 @@ def index():
                 "primeiro_email_enviado": False,
                 "segundo_email_enviado": False,
                 "email_manual_enviado": False,
+                "receita": float(request.form['receita'])
 
             }).execute()
             return redirect(url_for('index'))
@@ -525,27 +526,42 @@ def remover_cliente(email):
 @app.route('/update-gastos', methods=['POST'])
 @login_required
 def update_gastos():
-    """Update gastos for a client (admin only)"""
+    """Update gastos and receita for a client (admin only)"""
     if not session.get('is_admin'):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
     try:
         data = request.get_json()
         email = data.get('email')
-        gastos = data.get('gastos', 0.00)
+        gastos = float(data.get('gastos', 0.00))
 
         if not email:
             return {'success': False, 'error': 'Email is required'}
 
-        # Update the gastos field in the database
-        supabase.table("clientes").update({"gastos": gastos}).eq("email", email).execute()
+        # Buscar valor_final atual do cliente
+        resultado = supabase.table("clientes").select("valor_fatura").eq("email", email).execute()
+        dados = resultado.data
 
-        logger.info(f"Gastos updated for {email}: {gastos}")
+        if not dados:
+            return {'success': False, 'error': 'Cliente não encontrado'}
+
+        valor_fatura = dados[0]["valor_fatura"]
+        receita = valor_fatura - gastos
+
+        # Atualizar gastos e receita
+        supabase.table("clientes").update({
+            "gastos": gastos,
+            "receita": receita
+        }).eq("email", email).execute()
+
+        logger.info(f"Gastos e receita atualizados para {email}: gastos={gastos}, receita={receita}")
         return {'success': True}
 
+
     except Exception as e:
-        logger.error(f"Error updating gastos: {str(e)}")
+        logger.error(f"Erro ao atualizar gastos e receita: {str(e)}")
         return {'success': False, 'error': str(e)}
+
 
 
 # -------Send Email to All-----------
@@ -633,7 +649,8 @@ def exportar_emails():
             'Valor com Iva': cliente["valor_fatura"] * (1 + cliente["iva"]),
             'Valor de IVA': cliente["valor_fatura"] * cliente["iva"],
             'Desconto': cliente["desconto"],
-            'Gastos(€)': cliente.get("gastos", 0) or 0
+            'Gastos(€)': cliente.get("gastos", 0) or 0,
+            'Receita(€)': cliente["receita"]
         } for cliente in clientes]
 
         df = pd.DataFrame(clientes_data)
@@ -1592,6 +1609,26 @@ def upload_marketing_emails_excel():
     except Exception as e:
         logger.error(f"Error uploading marketing emails Excel: {str(e)}")
         return {'error': f'Erro ao processar arquivo: {str(e)}'}, 500
+
+@app.route('/marcar-email-manual/<email>', methods=['POST'])
+def marcar_email_manual(email):
+    resultado = supabase.table("clientes").select("*").eq("email", email).execute()
+    dados = resultado.data
+
+    if not dados:
+        flash("Cliente não encontrado.", "danger")
+        return redirect(url_for("index"))
+
+    cliente = dados[0]
+
+    if not cliente["email_manual_enviado"]:
+        supabase.table("clientes").update({"email_manual_enviado": True}).eq("email", email).execute()
+        flash("Email marcado como enviado com sucesso.", "success")
+    else:
+        flash("O email já estava marcado como enviado.", "info")
+
+    return redirect(url_for("index"))
+
 
 #-------Starter--------
 if __name__ == '__main__':

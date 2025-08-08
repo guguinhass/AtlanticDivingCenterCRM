@@ -219,6 +219,7 @@
                 <th>Desconto (%)</th>
                 {% if session.get('is_admin') %}
                     <th>Gastos (€)</th>
+                    <th>Receita (€)</th>
                 {% endif %}
                 <th>Nacionalidade</th>
                 <th>1º Email</th>
@@ -238,7 +239,6 @@
                     <td>{{ "%.2f"|format(cliente.valor_fatura) }} €</td>
                     <td>{{ "%.0f"|format(cliente.iva * 100) }}%</td>
                     <td>{% if cliente.desconto %}{{ cliente.desconto }}%{% else %}0.0{% endif %}</td>
-
                     {% if session.get('is_admin') %}
                         <td>
                             <input type="number"
@@ -250,12 +250,20 @@
                             €
                             <button type="button" class="btn btn-primary px-4 guardar-btn">Guardar</button>
                         </td>
+                        <td>{{ cliente.receita }} € </td>
                     {% endif %}
-
                     <td>{{ cliente.nacionalidade.capitalize() }}</td>
                     <td>{{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}</td>
                     <td>{{ 'Sim' if cliente.segundo_email_enviado else 'Não' }}</td>
-                    <td>{{ 'Sim' if cliente.email_manual_enviado else 'Não' }}</td>
+                    <td>
+                        {{ 'Sim' if cliente.email_manual_enviado else 'Não' }}
+                        <form action="{{ url_for('marcar_email_manual', email=cliente.email) }}" method="post"
+                              onsubmit="return confirm('Tem certeza que deseja marcar o email de {{ cliente.nome }} como enviado?');">
+                            <button type="submit" class="btn btn-sm btn-primary">
+                                Marcar como enviado
+                            </button>
+                        </form>
+                    </td>
                     <td class="d-flex gap-2">
                         <button type="button" class="btn btn-sm btn-success"
                                 data-email="{{ cliente.email }}"
