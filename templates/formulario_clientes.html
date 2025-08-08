@@ -143,6 +143,16 @@
                     <span class="input-group-text">€</span>
                 </div>
             </div>
+            <!-- Campo Receita (calculado automaticamente) -->
+            <div class="mb-3">
+                <label class="form-label">Receita (€):</label>
+                <div class="input-group">
+                    <input type="number" step="0.01" name="receita" id="receita" class="form-control" readonly>
+                    <span class="input-group-text">€</span>
+                </div>
+                <div class="form-text">Receita = Valor Final - Gastos</div>
+            </div>
+
         {% endif %}
 
         <div class="mb-3">
@@ -250,7 +260,7 @@
                             €
                             <button type="button" class="btn btn-primary px-4 guardar-btn">Guardar</button>
                         </td>
-                        <td>{{ cliente.receita }} € </td>
+                        <td>{{ cliente.receita }} €</td>
                     {% endif %}
                     <td>{{ cliente.nacionalidade.capitalize() }}</td>
                     <td>{{ 'Sim' if cliente.primeiro_email_enviado else 'Não' }}</td>
@@ -777,7 +787,27 @@
                         }
                     });
                 });
+
+
+                document.addEventListener("DOMContentLoaded", function () {
+                    const valorFaturaInput = document.getElementById("valor_fatura");
+                    const gastosInput = document.getElementById("gastos");
+                    const receitaInput = document.getElementById("receita");
+
+                    function calcularReceita() {
+                        const valorFatura = parseFloat(valorFaturaInput?.value) || 0;
+                        const gastos = parseFloat(gastosInput?.value) || 0;
+                        const receita = valorFatura - gastos;
+                        receitaInput.value = receita.toFixed(2);
+                    }
+
+                    valorFaturaInput?.addEventListener("input", calcularReceita);
+                    gastosInput?.addEventListener("input", calcularReceita);
+
+                    calcularReceita(); // inicializa valor
+                });
             </script>
+
 
             </tbody>
         </table>
