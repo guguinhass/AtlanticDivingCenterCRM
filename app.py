@@ -645,10 +645,10 @@ def exportar_emails():
             '1º Email Enviado': 'Sim' if cliente["primeiro_email_enviado"] else 'Não',
             '2º Email Enviado': 'Sim' if cliente["segundo_email_enviado"] else 'Não',
             'Email Manual': 'Sim' if cliente["email_manual_enviado"] else 'Não',
+            'Desconto (%)': cliente["desconto"],
             'Valor(€)': cliente["valor_fatura"],
-            'Valor com Iva': cliente["valor_fatura"] * (1 + cliente["iva"]),
-            'Valor de IVA': cliente["valor_fatura"] * cliente["iva"],
-            'Desconto': cliente["desconto"],
+            'Valor com Iva(€)': cliente["valor_fatura"] * (1 + cliente["iva"]),
+            'Valor de IVA(€)': cliente["valor_fatura"] * cliente["iva"],
             'Gastos(€)': cliente.get("gastos", 0) or 0,
             'Receita(€)': cliente["receita"]
         } for cliente in clientes]
@@ -661,10 +661,9 @@ def exportar_emails():
             workbook = writer.book
             worksheet = writer.sheets['Clientes']
 
-            for row in worksheet.iter_rows(min_row=2, min_col=5, max_col=11):
+            for row in worksheet.iter_rows(min_row=2, min_col=11, max_col=15):
                 for cell in row:
-                    cell.number_format = '#,##0.00" €"'
-
+                     cell.number_format = '#,##0.00" €"'
             for column in worksheet.columns:
                 max_length = 0
                 column_letter = column[0].column_letter
