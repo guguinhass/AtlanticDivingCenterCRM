@@ -203,7 +203,8 @@ if scheduler is not None:
             'interval',
             minutes=1,
             timezone="Europe/Lisbon",
-            id='email_check_job'
+            id='email_check_job',
+            replace_existing=True
         )
         logger.info("Email check job added to scheduler")
     except Exception as e:
@@ -215,7 +216,8 @@ if scheduler is not None:
                 'interval',
                 minutes=1,
                 timezone="Europe/Lisbon",
-                id='email_check_job'
+                id='email_check_job',
+                replace_existing=True
             )
             logger.info("Email check job added to scheduler (fallback)")
         except Exception as fallback_error:
@@ -1036,7 +1038,7 @@ def edit_email_template():
     template_content = {}
 
     # Always load templates from files
-    nacionalidades = ['português', 'inglês', 'francês', 'alemão']
+    nacionalidades = ['português', 'inglês', 'francês', 'alemão','dinamarques', 'espanhol', 'noruegues', 'polaco','sueco']
     import re  # Move import to top of function
 
     for nacionalidade in nacionalidades:
