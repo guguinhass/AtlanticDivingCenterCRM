@@ -17,6 +17,7 @@ import atexit
 from functools import wraps
 from openpyxl.styles import Alignment
 from werkzeug.security import generate_password_hash, check_password_hash
+import tempfile
 
 # Minimum delay between first and second email (in hours)
 MIN_EMAIL_DELAY_HOURS = 24
@@ -42,14 +43,72 @@ app = Flask(__name__)
 app.secret_key = os.getenv('APP_SECRET_KEY')
 
 # --------Initialize scheduler after Flask app is created--------
-if not app.debug and not os.environ.get('WERKZEUG_RUN_MAIN'):
-    scheduler = BackgroundScheduler(daemon=True)
-    scheduler.start()
-    logger.info("Email scheduler started")
-    atexit.register(lambda: scheduler.shutdown() if scheduler else None)
+# Guarded to avoid duplicate starts in multi-process environments (e.g., Gunicorn/Render)
+ENABLE_SCHEDULER_ENV = os.getenv('ENABLE_SCHEDULER')
+IS_DEBUG = bool(app.debug or os.getenv('FLASK_ENV') == 'development')
+
+# Default behavior: enable in local debug, disable in production unless ENABLE_SCHEDULER is explicitly set
+if ENABLE_SCHEDULER_ENV is None:
+    ENABLE_SCHEDULER = IS_DEBUG
 else:
-    logger.info("Skipping email scheduler in debug mode to prevent duplicates")
-    scheduler = None
+    ENABLE_SCHEDULER = ENABLE_SCHEDULER_ENV.strip().lower() in ("1", "true", "yes", "y")
+
+scheduler = None
+
+def _try_start_scheduler_with_lock() -> bool:
+    """Try to start the scheduler acquiring a per-host lock to avoid multi-worker duplicates.
+
+    Returns True if scheduler was started in this process, False otherwise.
+    """
+    try:
+        lock_path = os.path.join(tempfile.gettempdir(), 'email_scheduler.lock')
+        # Attempt to create the lock file atomically; exists -> another process owns it
+        fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        try:
+            os.write(fd, str(os.getpid()).encode('utf-8'))
+        finally:
+            os.close(fd)
+
+        # We own the lock, start the scheduler
+        _scheduler = BackgroundScheduler(daemon=True)
+        _scheduler.start()
+        logger.info(f"Email scheduler started (pid={os.getpid()}) with lock {lock_path}")
+
+        def _cleanup():
+            try:
+                if _scheduler:
+                    _scheduler.shutdown()
+            except Exception:
+                pass
+            try:
+                if os.path.exists(lock_path):
+                    os.remove(lock_path)
+            except Exception:
+                pass
+
+        atexit.register(_cleanup)
+        global scheduler
+        scheduler = _scheduler
+        return True
+    except FileExistsError:
+        logger.info("Another process already owns the scheduler lock; skipping scheduler startup")
+        return False
+    except Exception as e:
+        logger.error(f"Failed to start scheduler: {e}")
+        return False
+
+if ENABLE_SCHEDULER:
+    # In debug with reloader, only start in the reloaded child process
+    if IS_DEBUG:
+        if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+            _try_start_scheduler_with_lock()
+        else:
+            logger.info("Deferring scheduler start until reloader child process in debug mode")
+    else:
+        # Production: try to start once per container/host
+        _try_start_scheduler_with_lock()
+else:
+    logger.info("Scheduler disabled by configuration (ENABLE_SCHEDULER is false)")
 
 # --------Email Configuration------------
 app.config['SMTP_SERVER'] = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
@@ -224,7 +283,9 @@ if scheduler is not None:
             minutes=1,
             timezone="Europe/Lisbon",
             id='email_check_job',
-            replace_existing=True
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True
         )
         logger.info("Email check job added to scheduler")
     except Exception as e:
@@ -237,7 +298,9 @@ if scheduler is not None:
                 minutes=1,
                 timezone="Europe/Lisbon",
                 id='email_check_job',
-                replace_existing=True
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True
             )
             logger.info("Email check job added to scheduler (fallback)")
         except Exception as fallback_error:
