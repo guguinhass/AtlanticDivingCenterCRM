@@ -17,7 +17,12 @@ import atexit
 from functools import wraps
 from openpyxl.styles import Alignment
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
+import atexit
+from apscheduler.schedulers.background import BackgroundScheduler
 
+# Minimum delay between first and second email (in hours)
+MIN_EMAIL_DELAY_HOURS = 24
 # --------Load Environment Variables-------
 load_dotenv()
 
@@ -153,38 +158,67 @@ def email_feedback(cliente, template_type='primeiro'):
     }.get(cliente['nacionalidade'], "Obrigado pela sua experiência de mergulho!")
     return enviar_email(cliente['email'], assunto, cliente['nome'], cliente['nacionalidade'], template_type)
 
-# ----------Request-Based Email Checker-----------
+
 def check_and_send_emails():
-    with app.app_context():  # Ensure Flask context
-        hoje = datetime.now().date()
-        response = supabase.table("clientes").select("*").execute()
-        clientes = response.data
+    try:
+        with app.app_context():
+            logger.info(f"=== EMAIL CHECK STARTED - PID: {os.getpid()} ===")
+            hoje = datetime.now()
+            response = supabase.table("clientes").select("*").execute()
+            clientes = response.data
+            logger.info(f"Checking emails for {len(clientes)} clients")
 
-        logger.info(f"=== SCHEDULED EMAIL CHECK STARTED ===")
-        logger.info(f"Checking emails for {len(clientes)} clients")
+            for cliente in clientes:
+                try:
+                    data_mergulho = datetime.strptime(cliente['data_mergulho'], '%Y-%m-%d').date()
+                    dias_passados = (hoje.date() - data_mergulho).days
 
-        for cliente in clientes:
-            data_mergulho = datetime.strptime(cliente['data_mergulho'], '%Y-%m-%d').date()
-            dias_passados = (hoje - data_mergulho).days
+                    # First email logic (1+ days after dive)
+                    if dias_passados >= 1 and not cliente['primeiro_email_enviado']:
+                        logger.info(f"ATTEMPTING: First email to {cliente['email']}")
 
-            if dias_passados >= 1 and not cliente['primeiro_email_enviado']:
-                logger.info(f"SENDING: Sending first email to {cliente['email']}")
-                email_feedback(cliente, 'primeiro')
-                supabase.table("clientes").update(
-                    {"primeiro_email_enviado": True}
-                ).eq("email", cliente['email']).execute()
-                logger.info(f"SENT: First email sent successfully to {cliente['email']}")
+                        if email_feedback(cliente, 'primeiro'):
+                            # Store when the first email was sent
+                            supabase.table("clientes").update({
+                                "primeiro_email_enviado": True,
+                                "primeiro_email_enviado_em": hoje.isoformat()
+                            }).eq("email", cliente['email']).execute()
+                            logger.info(f"SUCCESS: First email sent to {cliente['email']}")
 
-            if dias_passados >= 3 and not cliente['segundo_email_enviado']:
-                logger.info(f"SCHEDULED: Sending second email to {cliente['email']} (day {dias_passados})")
-                if email_feedback(cliente, 'segundo'):
-                    supabase.table("clientes").update(
-                        {"segundo_email_enviado": True}
-                    ).eq("email", cliente['email']).execute()
-                    logger.info(f"SCHEDULED: Second email sent successfully to {cliente['email']}")
+                    # Second email logic (3+ days after dive AND at least 24h after first email)
+                    if dias_passados >= 3 and not cliente['segundo_email_enviado']:
+                        # Check if first email was sent and when
+                        if cliente['primeiro_email_enviado'] and cliente.get('primeiro_email_enviado_em'):
+                            primeiro_email_time = datetime.fromisoformat(cliente['primeiro_email_enviado_em'])
+                            hours_since_first_email = (hoje - primeiro_email_time).total_seconds() / 3600
 
-        logger.info(f"=== SCHEDULED EMAIL CHECK COMPLETED ===")
+                            if hours_since_first_email >= 24:  # Minimum 24h delay
+                                logger.info(f"ATTEMPTING: Second email to {cliente['email']}")
+                                if email_feedback(cliente, 'segundo'):
+                                    supabase.table("clientes").update({
+                                        "segundo_email_enviado": True,
+                                        "segundo_email_enviado_em": hoje.isoformat()
+                                    }).eq("email", cliente['email']).execute()
+                                    logger.info(f"SUCCESS: Second email sent to {cliente['email']}")
 
+                except Exception as client_error:
+                    logger.error(f"Error processing client {cliente.get('email', 'unknown')}: {str(client_error)}")
+                    continue
+
+    except Exception as e:
+        logger.error(f"Critical error in check_and_send_emails: {str(e)}")
+
+scheduler = None
+
+# ✅ Inicia o scheduler apenas no processo principal
+if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    scheduler = BackgroundScheduler(daemon=True)
+    scheduler.start()
+    logger.info("Email scheduler started")
+    atexit.register(lambda: scheduler.shutdown() if scheduler else None)
+else:
+    logger.info("Skipping email scheduler in secondary process")
+    scheduler = None
 
 # ------Email Sending Scheduler-------
 # Only add scheduler job if scheduler exists and not in debug mode
@@ -224,21 +258,6 @@ if scheduler is not None:
             logger.error(f"Failed to add email check job in fallback: {str(fallback_error)}")
 else:
     logger.info("Skipping email scheduler - scheduler not available")
-
-
-# ---------Time-Checker----------
-# Manual email checking for debug mode
-@app.route('/check-emails-manual', methods=['POST'])
-@login_required
-def check_emails_manual():
-    """Manual trigger for email checking (useful in debug mode)"""
-    if not session.get('is_admin'):
-        return 'Unauthorized', 403
-
-    logger.info("Manual email check triggered")
-    check_and_send_emails()
-    return 'Email check completed', 200
-
 
 @app.route('/clear-email-templates', methods=['POST'])
 @login_required
@@ -1628,5 +1647,4 @@ def marcar_email_manual(email):
 
 #-------Starter--------
 if __name__ == '__main__':
-    # Timer(3, open_browser).start()
     app.run()

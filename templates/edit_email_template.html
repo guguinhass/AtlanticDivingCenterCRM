@@ -99,6 +99,7 @@
                 </div>
             </div>
 
+            <!-- Danish Template -->
             <div class="col-md-6 mb-4">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -114,6 +115,7 @@
                 </div>
             </div>
 
+            <!-- Spanish Template -->
             <div class="col-md-6 mb-4">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -129,6 +131,7 @@
                 </div>
             </div>
 
+            <!-- Norwegian Template -->
             <div class="col-md-6 mb-4">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -144,6 +147,7 @@
                 </div>
             </div>
 
+            <!-- Polish Template -->
             <div class="col-md-6 mb-4">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -159,6 +163,7 @@
                 </div>
             </div>
 
+            <!-- Swedish Template -->
             <div class="col-md-6 mb-4">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -321,11 +326,11 @@
         var inglesContent = document.getElementById('inglesTemplate').innerHTML;
         var francesContent = document.getElementById('francesTemplate').innerHTML;
         var alemaoContent = document.getElementById('alemaoTemplate').innerHTML;
-        var dinamarquesContent= document.getElementById('dinamarquesTemplate').innerHTML;
-        var espanholQuill= document.getElementById('espanholTemplate').innerHTML;
-        var norueguesQuill= document.getElementById('norueguesTemplate').innerHTML;
-        var polacoQuill= document.getElementById('polacoTemplate').innerHTML;
-        var suecoQuill= document.getElementById('suecoTemplate').innerHTML;
+        var dinamarquesContent = document.getElementById('dinamarquesTemplate').innerHTML;
+        var espanholContent = document.getElementById('espanholTemplate').innerHTML;
+        var norueguesContent = document.getElementById('norueguesTemplate').innerHTML;
+        var polacoContent = document.getElementById('polacoTemplate').innerHTML;
+        var suecoContent = document.getElementById('suecoTemplate').innerHTML;
 
         console.log('Template content loaded:', {
             'português': portuguesContent.length + ' chars',
@@ -339,22 +344,15 @@
             'sueco': suecoContent.length + ' chars'
         });
 
-        console.log('Portuguese content preview:', portuguesContent.substring(0, 200));
-        console.log('English content preview:', inglesContent.substring(0, 200));
-        console.log('Raw Portuguese template element:', document.getElementById('portuguesTemplate').outerHTML);
-
         // Set content in editors using Quill's proper API
         if (portuguesContent && portuguesContent.trim()) {
             console.log('Setting Portuguese content in editor, length:', portuguesContent.length);
-            console.log('Portuguese content preview:', portuguesContent.substring(0, 100));
             try {
                 portuguesQuill.clipboard.dangerouslyPasteHTML(portuguesContent);
                 console.log('Portuguese content set in editor successfully');
             } catch (error) {
                 console.error('Error setting Portuguese content:', error);
             }
-        } else {
-            console.log('Portuguese content is empty or null');
         }
 
         if (inglesContent && inglesContent.trim()) {
@@ -364,8 +362,6 @@
             } catch (error) {
                 console.error('Error setting English content:', error);
             }
-        } else {
-            console.log('English content is empty or null');
         }
 
         if (francesContent && francesContent.trim()) {
@@ -375,8 +371,6 @@
             } catch (error) {
                 console.error('Error setting French content:', error);
             }
-        } else {
-            console.log('French content is empty or null');
         }
 
         if (alemaoContent && alemaoContent.trim()) {
@@ -386,20 +380,17 @@
             } catch (error) {
                 console.error('Error setting German content:', error);
             }
-        } else {
-            console.log('German content is empty or null');
         }
 
-         if (dinamarquesContent && dinamarquesContent.trim()) {
+        if (dinamarquesContent && dinamarquesContent.trim()) {
             try {
-                dinamarquesaQuill.clipboard.dangerouslyPasteHTML(dinamarquesContent);
+                dinamarquesQuill.clipboard.dangerouslyPasteHTML(dinamarquesContent);
                 console.log('Danish content set in editor');
             } catch (error) {
                 console.error('Error setting Danish content:', error);
             }
-        } else {
-            console.log('Danish content is empty or null');
         }
+
         if (espanholContent && espanholContent.trim()) {
             try {
                 espanholQuill.clipboard.dangerouslyPasteHTML(espanholContent);
@@ -407,9 +398,8 @@
             } catch (error) {
                 console.error('Error setting Spanish content:', error);
             }
-        } else {
-            console.log('Spanish content is empty or null');
         }
+
         if (norueguesContent && norueguesContent.trim()) {
             try {
                 norueguesQuill.clipboard.dangerouslyPasteHTML(norueguesContent);
@@ -417,9 +407,8 @@
             } catch (error) {
                 console.error('Error setting Norwegian content:', error);
             }
-        } else {
-            console.log('Norwegian content is empty or null');
         }
+
         if (polacoContent && polacoContent.trim()) {
             try {
                 polacoQuill.clipboard.dangerouslyPasteHTML(polacoContent);
@@ -427,9 +416,8 @@
             } catch (error) {
                 console.error('Error setting Polish content:', error);
             }
-        } else {
-            console.log('Polish content is empty or null');
         }
+
         if (suecoContent && suecoContent.trim()) {
             try {
                 suecoQuill.clipboard.dangerouslyPasteHTML(suecoContent);
@@ -437,8 +425,6 @@
             } catch (error) {
                 console.error('Error setting Swedish content:', error);
             }
-        } else {
-            console.log('Swedish content is empty or null');
         }
 
         // Update status badges - all are default since we load from files
@@ -446,6 +432,7 @@
         updateStatusBadge('inglesStatus', 'default');
         updateStatusBadge('francesStatus', 'default');
         updateStatusBadge('alemaoStatus', 'default');
+        updateStatusBadge('dinamarquesStatus', 'default');
         updateStatusBadge('espanholStatus', 'default');
         updateStatusBadge('norueguesStatus', 'default');
         updateStatusBadge('polacoStatus', 'default');
