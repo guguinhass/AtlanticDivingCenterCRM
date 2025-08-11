@@ -18,5 +18,5 @@ EXPOSE 8000
 ENV FLASK_ENV=production
 
 # Start the app with Gunicorn
-CMD ["gunicorn", "-w", "2", "--timeout", "120", "-b", "0.0.0.0:8000", "app:app"]
+CMD ["gunicorn", "-w", "4", "--timeout", "120", "-b", "0.0.0.0:8000", "app:app"]
 
