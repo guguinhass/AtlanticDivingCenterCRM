@@ -198,7 +198,6 @@ def check_and_send_emails():
     except Exception as e:
         logger.error(f"Critical error in check_and_send_emails: {str(e)}")
 
-scheduler = None
 
 # ✅ Inicia o scheduler apenas no processo principal
 if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
