@@ -44,16 +44,6 @@ app = Flask(__name__)
 # ------------Login Credentials-------------
 app.secret_key = os.getenv('APP_SECRET_KEY')
 
-# --------Initialize scheduler after Flask app is created--------
-if not app.debug and not os.environ.get('WERKZEUG_RUN_MAIN'):
-    scheduler = BackgroundScheduler(daemon=True)
-    scheduler.start()
-    logger.info("Email scheduler started")
-    atexit.register(lambda: scheduler.shutdown() if scheduler else None)
-else:
-    logger.info("Skipping email scheduler in debug mode to prevent duplicates")
-    scheduler = None
-
 # --------Email Configuration------------
 app.config['SMTP_SERVER'] = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
 app.config['SMTP_PORT'] = int(os.getenv('SMTP_PORT', 465))
