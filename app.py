@@ -83,6 +83,11 @@ def get_email_template_content(nacionalidade, template_type='primeiro'):
             'inglês': 'email_feedback_internacional_ingles.html',
             'alemão': 'email_feedback_internacional_alemao.html',
             'francês': 'email_feedback_internacional_frances.html',
+            'dinamarques': 'email_feedback_internacional_dinamarques.html',
+            'espanhol': 'email_feedback_internacional_espanhol.html',
+            'noruegues': 'email_feedback_internacional_noruegues.html',
+            'polaco': 'email_feedback_internacional_polaco.html',
+            'sueco': 'email_feedback_internacional_sueco.html',
         }
 
         template_file = template_files.get(nacionalidade, 'email_feedback.html')
@@ -140,9 +145,13 @@ def email_feedback(cliente, template_type='primeiro'):
         'inglês': "Thank you for your diving experience!",
         'francês': "Merci d'avoir plongé avec nous",
         'alemão': "Danke für Ihr Taucherlebnis",
+        'dinamarques': "Tak for din dykkeroplevelse!",
+        'espanhol': "¡Gracias por tu experiencia de buceo!",
+        'noruegues': "Takk for din dykkeopplevelse!",
+        'polaco': "Dziękujemy za Twoje doświadczenie nurkowe!",
+        'sueco': "Tack för din dykupplevelse!",
     }.get(cliente['nacionalidade'], "Obrigado pela sua experiência de mergulho!")
     return enviar_email(cliente['email'], assunto, cliente['nome'], cliente['nacionalidade'], template_type)
-
 
 # ----------Request-Based Email Checker-----------
 def check_and_send_emails():
@@ -229,51 +238,6 @@ def check_emails_manual():
     return 'Email check completed', 200
 
 
-# Add a route to check if we're in debug mode
-@app.route('/debug-info')
-def debug_info():
-    """Return debug information"""
-    return {
-        'debug_mode': app.debug,
-        'scheduler_active': scheduler is not None,
-        'scheduler_running': scheduler.running if scheduler else False
-    }
-
-
-@app.route('/debug-templates')
-def debug_templates():
-    """Debug template loading"""
-    try:
-        import re
-        with app.app_context():
-            portugues_full = render_template('email_feedback.html', nome="[NOME]")
-            ingles_full = render_template('email_feedback_internacional_ingles.html', nome="[NOME]")
-            frances_full = render_template('email_feedback_internacional_frances.html', nome="[NOME]")
-            alemao_full = render_template('email_feedback_internacional_alemao.html', nome="[NOME]")
-
-            # Extract body content
-            portugues_body = re.search(r'<body[^>]*>(.*?)</body>', portugues_full, re.DOTALL | re.IGNORECASE)
-            ingles_body = re.search(r'<body[^>]*>(.*?)</body>', ingles_full, re.DOTALL | re.IGNORECASE)
-            frances_body = re.search(r'<body[^>]*>(.*?)</body>', frances_full, re.DOTALL | re.IGNORECASE)
-            alemao_body = re.search(r'<body[^>]*>(.*?)</body>', alemao_full, re.DOTALL | re.IGNORECASE)
-
-        return {
-            'portugues_full_length': len(portugues_full),
-            'portugues_body_length': len(portugues_body.group(1).strip()) if portugues_body else 0,
-            'ingles_full_length': len(ingles_full),
-            'ingles_body_length': len(ingles_body.group(1).strip()) if ingles_body else 0,
-            'frances_full_length': len(frances_full),
-            'frances_body_length': len(frances_body.group(1).strip()) if frances_body else 0,
-            'alemao_full_length': len(alemao_full),
-            'alemao_body_length': len(alemao_body.group(1).strip()) if alemao_body else 0,
-            'portugues_body_preview': portugues_body.group(1).strip()[
-                                      :200] + '...' if portugues_body else 'No body found',
-            'portugues_full_preview': portugues_full[:200] + '...' if len(portugues_full) > 200 else portugues_full
-        }
-    except Exception as e:
-        return {'error': str(e)}
-
-
 @app.route('/clear-email-templates', methods=['POST'])
 @login_required
 def clear_email_templates():
@@ -291,7 +255,6 @@ def clear_email_templates():
         logger.error(f"Error clearing email templates: {str(e)}")
 
     return redirect(url_for('index'))
-
 
 # ------------Flask Routes-----------
 @app.route('/', methods=['GET', 'POST'])
@@ -521,7 +484,6 @@ def remover_cliente(email):
     except Exception as e:
         return str(e), 500
 
-
 # ---------Update Gastos---------
 @app.route('/update-gastos', methods=['POST'])
 @login_required
@@ -562,8 +524,6 @@ def update_gastos():
         logger.error(f"Erro ao atualizar gastos e receita: {str(e)}")
         return {'success': False, 'error': str(e)}
 
-
-
 # -------Send Email to All-----------
 @app.route('/enviar-todos', methods=['POST'])
 def enviar_manual_todos():
@@ -593,7 +553,6 @@ def enviar_manual_todos():
         logger.error(f'Erro ao enviar emails: {str(e)}')
         return redirect(url_for('index'))
 
-
 # --------Debug----------
 @app.route('/debug/<email>')
 def debug_cliente(email):
@@ -612,7 +571,6 @@ def debug_cliente(email):
         'data_mergulho': str(data_mergulho),
         'dias_passados': (datetime.now().date() - data_mergulho).days
     }
-
 
 # --------Table Refreshing------------
 @app.route('/atualizar-tabela')
@@ -863,7 +821,6 @@ def login():
             flash('Usuário ou senha inválidos', 'danger')
     return render_template('login.html')
 
-
 # -------Iva setter--------
 @app.route('/set-iva', methods=['POST'])
 @login_required
@@ -871,7 +828,6 @@ def set_iva():
     new_iva = request.json.get('iva')
     supabase.table("configuracoes").upsert({"chave": "iva", "valor": str(new_iva)}).execute()
     return {'success': True}
-
 
 # --------Edit Email Templates---------
 @app.route('/editar-primeiro-email', methods=['GET', 'POST'])
@@ -897,6 +853,11 @@ def editar_primeiro_email():
                     'inglês': 'email_feedback_internacional_ingles.html',
                     'francês': 'email_feedback_internacional_frances.html',
                     'alemão': 'email_feedback_internacional_alemao.html',
+                    'dinamarques': "Tak for din dykkeroplevelse!",
+                    'espanhol': "¡Gracias por tu experiencia de buceo!",
+                    'noruegues': "Takk for din dykkeopplevelse!",
+                    'polaco': "Dziękujemy za Twoje doświadczenie nurkowe!",
+                    'sueco': "Tack för din dykupplevelse!",
                 }
                 template_file = template_files.get(nacionalidade, 'email_feedback.html')
 
@@ -929,7 +890,6 @@ def editar_primeiro_email():
         flash('Erro ao abrir editor de email', 'danger')
         return redirect(url_for('index'))
 
-
 # -----------Edit Second Email------------
 @app.route('/editar-segundo-email', methods=['GET', 'POST'])
 @login_required
@@ -954,6 +914,11 @@ def editar_segundo_email():
                     'inglês': 'email_feedback_internacional_ingles.html',
                     'francês': 'email_feedback_internacional_frances.html',
                     'alemão': 'email_feedback_internacional_alemao.html',
+                    'dinamarques': "Tak for din dykkeroplevelse!",
+                    'espanhol': "¡Gracias por tu experiencia de buceo!",
+                    'noruegues': "Takk for din dykkeopplevelse!",
+                    'polaco': "Dziękujemy za Twoje doświadczenie nurkowe!",
+                    'sueco': "Tack för din dykupplevelse!",
                 }
                 template_file = template_files.get(nacionalidade, 'email_feedback.html')
 
@@ -1002,6 +967,11 @@ def edit_email_template():
             ingles_content = request.form.get('ingles_content', '')
             frances_content = request.form.get('frances_content', '')
             alemao_content = request.form.get('alemao_content', '')
+            dinamarques_content = request.form.get('dinamarques_content', '')
+            espanhol_content = request.form.get('espanhol_content', '')
+            noruegues_content = request.form.get('noruegues_content', '')
+            polaco_content = request.form.get('polaco_content', '')
+            sueco_content = request.form.get('sueco_content', '')
 
             editing_template = session.get('editing_template', 'primeiro')
 
@@ -1024,6 +994,21 @@ def edit_email_template():
                 if alemao_content.strip():
                     templates_to_save.append(
                         {'nacionalidade': 'alemão', 'tipo': editing_template, 'conteudo': alemao_content})
+                if dinamarques_content.strip():
+                    templates_to_save.append(
+                        {'nacionalidade': 'dinamarques', 'tipo': editing_template, 'conteudo': dinamarques_content})
+                if espanhol_content.strip():
+                    templates_to_save.append(
+                        {'nacionalidade': 'espanhol', 'tipo': editing_template, 'conteudo': espanhol_content})
+                if noruegues_content.strip():
+                    templates_to_save.append(
+                        {'nacionalidade': 'noruegues', 'tipo': editing_template, 'conteudo': noruegues_content})
+                if polaco_content.strip():
+                    templates_to_save.append(
+                        {'nacionalidade': 'polaco', 'tipo': editing_template, 'conteudo': polaco_content})
+                if sueco_content.strip():
+                    templates_to_save.append(
+                        {'nacionalidade': 'sueco', 'tipo': editing_template, 'conteudo': sueco_content})
 
                 # Delete existing templates for this type
                 supabase.table("email_templates").delete().eq("tipo", editing_template).execute()
@@ -1062,6 +1047,11 @@ def edit_email_template():
                 'inglês': 'email_feedback_internacional_ingles.html',
                 'francês': 'email_feedback_internacional_frances.html',
                 'alemão': 'email_feedback_internacional_alemao.html',
+                'dinamarques': 'email_feedback_internacional_dinamarques.html',
+                'espanhol': 'email_feedback_internacional_espanhol.html',
+                'noruegues': 'email_feedback_internacional_noruegues.html',
+                'polaco': 'email_feedback_internacional_polaco.html',
+                'sueco': 'email_feedback_internacional_sueco.html',
             }
             template_file = template_files.get(nacionalidade, 'email_feedback.html')
 
@@ -1100,7 +1090,12 @@ def edit_email_template():
         'português': 'default',
         'inglês': 'default',
         'francês': 'default',
-        'alemão': 'default'
+        'alemão': 'default',
+        'dinamarques': 'default',
+        'espanhol': 'default',
+        'noruegues': 'default',
+        'polaco': 'default',
+        'sueco': 'default',
     }
 
     # Debug: Print template content lengths

@@ -98,6 +98,81 @@
                     </div>
                 </div>
             </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Template Dinamarquês</h5>
+                        <span class="badge bg-info" id="dinamarquesStatus">Padrão</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="dinamarquesEditor" style="height: 300px;"></div>
+                        <input type="hidden" name="dinamarques_content" id="dinamarquesContent">
+                        <script type="text/template"
+                                id="dinamarquesTemplate">{{ template_content['dinamarques'] | safe }}</script>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Template Espanhol</h5>
+                        <span class="badge bg-info" id="espanholStatus">Padrão</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="espanholEditor" style="height: 300px;"></div>
+                        <input type="hidden" name="espanhol_content" id="espanholContent">
+                        <script type="text/template"
+                                id="espanholTemplate">{{ template_content['espanhol'] | safe }}</script>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Template Norueguês</h5>
+                        <span class="badge bg-info" id="norueguesStatus">Padrão</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="norueguesEditor" style="height: 300px;"></div>
+                        <input type="hidden" name="noruegues_content" id="norueguesContent">
+                        <script type="text/template"
+                                id="norueguesTemplate">{{ template_content['noruegues'] | safe }}</script>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Template Polaco</h5>
+                        <span class="badge bg-info" id="polacoStatus">Padrão</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="polacoEditor" style="height: 300px;"></div>
+                        <input type="hidden" name="polaco_content" id="polacoContent">
+                        <script type="text/template"
+                                id="polacoTemplate">{{ template_content['polaco'] | safe }}</script>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Template Sueco</h5>
+                        <span class="badge bg-info" id="suecoStatus">Padrão</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="suecoEditor" style="height: 300px;"></div>
+                        <input type="hidden" name="sueco_content" id="suecoContent">
+                        <script type="text/template"
+                                id="suecoTemplate">{{ template_content['sueco'] | safe }}</script>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="text-center mt-4">
@@ -166,6 +241,66 @@
         }
     });
 
+    var dinamarquesQuill = new Quill('#dinamarquesEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{'list': 'ordered'}, {'list': 'bullet'}],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+
+    var espanholQuill = new Quill('#espanholEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{'list': 'ordered'}, {'list': 'bullet'}],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+
+    var norueguesQuill = new Quill('#norueguesEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{'list': 'ordered'}, {'list': 'bullet'}],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+
+    var polacoQuill = new Quill('#polacoEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{'list': 'ordered'}, {'list': 'bullet'}],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+
+    var suecoQuill = new Quill('#suecoEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{'list': 'ordered'}, {'list': 'bullet'}],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+
     // Load existing content
     document.addEventListener('DOMContentLoaded', function () {
         console.log('DOMContentLoaded fired');
@@ -173,7 +308,12 @@
             'portuguesQuill': typeof portuguesQuill,
             'inglesQuill': typeof inglesQuill,
             'francesQuill': typeof francesQuill,
-            'alemaoQuill': typeof alemaoQuill
+            'alemaoQuill': typeof alemaoQuill,
+            'dinamarquesQuill': typeof dinamarquesQuill,
+            'espanholQuill': typeof espanholQuill,
+            'norueguesQuill': typeof norueguesQuill,
+            'polacoQuill': typeof polacoQuill,
+            'suecoQuill': typeof suecoQuill,
         });
 
         // Get content from template scripts
@@ -181,12 +321,22 @@
         var inglesContent = document.getElementById('inglesTemplate').innerHTML;
         var francesContent = document.getElementById('francesTemplate').innerHTML;
         var alemaoContent = document.getElementById('alemaoTemplate').innerHTML;
+        var dinamarquesContent= document.getElementById('dinamarquesTemplate').innerHTML;
+        var espanholQuill= document.getElementById('espanholTemplate').innerHTML;
+        var norueguesQuill= document.getElementById('norueguesTemplate').innerHTML;
+        var polacoQuill= document.getElementById('polacoTemplate').innerHTML;
+        var suecoQuill= document.getElementById('suecoTemplate').innerHTML;
 
         console.log('Template content loaded:', {
             'português': portuguesContent.length + ' chars',
             'inglês': inglesContent.length + ' chars',
             'francês': francesContent.length + ' chars',
-            'alemão': alemaoContent.length + ' chars'
+            'alemão': alemaoContent.length + ' chars',
+            'dinamarques': dinamarquesContent.length + ' chars',
+            'espanhol': espanholContent.length + ' chars',
+            'noruegues': norueguesContent.length + ' chars',
+            'polaco': polacoContent.length + ' chars',
+            'sueco': suecoContent.length + ' chars'
         });
 
         console.log('Portuguese content preview:', portuguesContent.substring(0, 200));
@@ -240,11 +390,66 @@
             console.log('German content is empty or null');
         }
 
+         if (dinamarquesContent && dinamarquesContent.trim()) {
+            try {
+                dinamarquesaQuill.clipboard.dangerouslyPasteHTML(dinamarquesContent);
+                console.log('Danish content set in editor');
+            } catch (error) {
+                console.error('Error setting Danish content:', error);
+            }
+        } else {
+            console.log('Danish content is empty or null');
+        }
+        if (espanholContent && espanholContent.trim()) {
+            try {
+                espanholQuill.clipboard.dangerouslyPasteHTML(espanholContent);
+                console.log('Spanish content set in editor');
+            } catch (error) {
+                console.error('Error setting Spanish content:', error);
+            }
+        } else {
+            console.log('Spanish content is empty or null');
+        }
+        if (norueguesContent && norueguesContent.trim()) {
+            try {
+                norueguesQuill.clipboard.dangerouslyPasteHTML(norueguesContent);
+                console.log('Norwegian content set in editor');
+            } catch (error) {
+                console.error('Error setting Norwegian content:', error);
+            }
+        } else {
+            console.log('Norwegian content is empty or null');
+        }
+        if (polacoContent && polacoContent.trim()) {
+            try {
+                polacoQuill.clipboard.dangerouslyPasteHTML(polacoContent);
+                console.log('Polish content set in editor');
+            } catch (error) {
+                console.error('Error setting Polish content:', error);
+            }
+        } else {
+            console.log('Polish content is empty or null');
+        }
+        if (suecoContent && suecoContent.trim()) {
+            try {
+                suecoQuill.clipboard.dangerouslyPasteHTML(suecoContent);
+                console.log('Swedish content set in editor');
+            } catch (error) {
+                console.error('Error setting Swedish content:', error);
+            }
+        } else {
+            console.log('Swedish content is empty or null');
+        }
+
         // Update status badges - all are default since we load from files
         updateStatusBadge('portuguesStatus', 'default');
         updateStatusBadge('inglesStatus', 'default');
         updateStatusBadge('francesStatus', 'default');
         updateStatusBadge('alemaoStatus', 'default');
+        updateStatusBadge('espanholStatus', 'default');
+        updateStatusBadge('norueguesStatus', 'default');
+        updateStatusBadge('polacoStatus', 'default');
+        updateStatusBadge('suecoStatus', 'default');
     });
 
     function updateStatusBadge(elementId, status) {
@@ -298,6 +503,11 @@
         document.getElementById('inglesContent').value = inglesQuill.root.innerHTML;
         document.getElementById('francesContent').value = francesQuill.root.innerHTML;
         document.getElementById('alemaoContent').value = alemaoQuill.root.innerHTML;
+        document.getElementById('dinamarquesContent').value = dinamarquesQuill.root.innerHTML;
+        document.getElementById('espanholContent').value = espanholQuill.root.innerHTML;
+        document.getElementById('norueguesContent').value = norueguesQuill.root.innerHTML;
+        document.getElementById('polacoContent').value = polacoQuill.root.innerHTML;
+        document.getElementById('suecoContent').value = suecoQuill.root.innerHTML;
     });
 </script>
 
