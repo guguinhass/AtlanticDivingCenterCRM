@@ -17,9 +17,6 @@ import atexit
 from functools import wraps
 from openpyxl.styles import Alignment
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
-import atexit
-from apscheduler.schedulers.background import BackgroundScheduler
 
 # Minimum delay between first and second email (in hours)
 MIN_EMAIL_DELAY_HOURS = 24
@@ -43,6 +40,16 @@ app = Flask(__name__)
 
 # ------------Login Credentials-------------
 app.secret_key = os.getenv('APP_SECRET_KEY')
+
+# --------Initialize scheduler after Flask app is created--------
+if not app.debug and not os.environ.get('WERKZEUG_RUN_MAIN'):
+    scheduler = BackgroundScheduler(daemon=True)
+    scheduler.start()
+    logger.info("Email scheduler started")
+    atexit.register(lambda: scheduler.shutdown() if scheduler else None)
+else:
+    logger.info("Skipping email scheduler in debug mode to prevent duplicates")
+    scheduler = None
 
 # --------Email Configuration------------
 app.config['SMTP_SERVER'] = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
@@ -150,6 +157,7 @@ def email_feedback(cliente, template_type='primeiro'):
 
 
 def check_and_send_emails():
+    """Check and send emails with minimum delay enforcement"""
     try:
         with app.app_context():
             logger.info(f"=== EMAIL CHECK STARTED - PID: {os.getpid()} ===")
@@ -198,17 +206,6 @@ def check_and_send_emails():
     except Exception as e:
         logger.error(f"Critical error in check_and_send_emails: {str(e)}")
 
-
-# ✅ Inicia o scheduler apenas no processo principal
-if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-    scheduler = BackgroundScheduler(daemon=True)
-    scheduler.start()
-    logger.info("Email scheduler started")
-    atexit.register(lambda: scheduler.shutdown() if scheduler else None)
-else:
-    logger.info("Skipping email scheduler in secondary process")
-    scheduler = None
-
 # ------Email Sending Scheduler-------
 # Only add scheduler job if scheduler exists and not in debug mode
 if scheduler is not None:
@@ -247,6 +244,7 @@ if scheduler is not None:
             logger.error(f"Failed to add email check job in fallback: {str(fallback_error)}")
 else:
     logger.info("Skipping email scheduler - scheduler not available")
+
 
 @app.route('/clear-email-templates', methods=['POST'])
 @login_required
