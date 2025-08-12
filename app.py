@@ -355,21 +355,35 @@ def index():
                 except (ValueError, TypeError):
                     gastos = 0.0
 
+            # Parse core numeric fields safely
+            try:
+                valor_fatura = float(request.form['valor_fatura'])
+            except (ValueError, TypeError, KeyError):
+                valor_fatura = 0.0
+
+            try:
+                iva_value = float(request.form.get('iva', 22)) / 100
+            except (ValueError, TypeError):
+                iva_value = 0.22
+
+            # Compute receita on the server for all users (avoids missing field for non-admin)
+            receita_value = valor_fatura - gastos
+
             supabase.table("clientes").insert({
                 "adicionado_por": session.get('username', 'desconhecido'),
                 "nome": request.form['nome'],
                 "num_mergulho": int(request.form['num_mergulho']),
                 "email": email,
                 "data_mergulho": request.form['data_mergulho'],
-                "valor_fatura": float(request.form['valor_fatura']),
+                "valor_fatura": valor_fatura,
                 "desconto": desconto,
-                "iva": float(request.form.get('iva', 22)) / 100,
-                "nacionalidade": request.form.get('nacionalidade', 'portugues'),
+                "iva": iva_value,
+                "nacionalidade": request.form.get('nacionalidade', 'português'),
                 "gastos": gastos,
                 "primeiro_email_enviado": False,
                 "segundo_email_enviado": False,
                 "email_manual_enviado": False,
-                "receita": float(request.form['receita'])
+                "receita": receita_value
 
             }).execute()
             return redirect(url_for('index'))
