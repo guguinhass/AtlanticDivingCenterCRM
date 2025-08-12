@@ -149,9 +149,11 @@ def get_email_template_content(nacionalidade, template_type='primeiro'):
             'noruegues': 'email_feedback_internacional_noruegues.html',
             'polaco': 'email_feedback_internacional_polaco.html',
             'sueco': 'email_feedback_internacional_sueco.html',
+            'outro': 'email_feedback_internacional_ingles.html',  # Use English template for "Other"
         }
 
         template_file = template_files.get(nacionalidade, 'email_feedback.html')
+        
         with app.app_context():
             file_content = render_template(template_file, nome="[NOME]")
 
@@ -211,6 +213,7 @@ def email_feedback(cliente, template_type='primeiro'):
         'noruegues': "Takk for din dykkeopplevelse!",
         'polaco': "Dziękujemy za Twoje doświadczenie nurkowe!",
         'sueco': "Tack för din dykupplevelse!",
+        'outro': "Thank you for your diving experience!",  # Use English subject for "Other"
     }.get(cliente['nacionalidade'], "Obrigado pela sua experiência de mergulho!")
     return enviar_email(cliente['email'], assunto, cliente['nome'], cliente['nacionalidade'], template_type)
 
@@ -307,6 +310,8 @@ if scheduler is not None:
             logger.error(f"Failed to add email check job in fallback: {str(fallback_error)}")
 else:
     logger.info("Skipping email scheduler - scheduler not available")
+
+
 
 
 @app.route('/clear-email-templates', methods=['POST'])
@@ -927,7 +932,7 @@ def editar_primeiro_email():
         logger.info("Getting template content for primeiro email")
         # Get template content using the same logic as get_email_template_content
         template_content = {}
-        nacionalidades = ['português', 'inglês', 'francês', 'alemão']
+        nacionalidades = ['português', 'inglês', 'francês', 'alemão', 'dinamarques', 'espanhol', 'noruegues', 'polaco', 'sueco', 'outro']
         import re  # Move import to top of function
 
         for nacionalidade in nacionalidades:
@@ -938,11 +943,12 @@ def editar_primeiro_email():
                     'inglês': 'email_feedback_internacional_ingles.html',
                     'francês': 'email_feedback_internacional_frances.html',
                     'alemão': 'email_feedback_internacional_alemao.html',
-                    'dinamarques': "Tak for din dykkeroplevelse!",
-                    'espanhol': "¡Gracias por tu experiencia de buceo!",
-                    'noruegues': "Takk for din dykkeopplevelse!",
-                    'polaco': "Dziękujemy za Twoje doświadczenie nurkowe!",
-                    'sueco': "Tack för din dykupplevelse!",
+                    'dinamarques': 'email_feedback_internacional_dinamarques.html',
+                    'espanhol': 'email_feedback_internacional_espanhol.html',
+                    'noruegues': 'email_feedback_internacional_noruegues.html',
+                    'polaco': 'email_feedback_internacional_polaco.html',
+                    'sueco': 'email_feedback_internacional_sueco.html',
+                    'outro': 'email_feedback_internacional_ingles.html',  # Use English template for "Other"
                 }
                 template_file = template_files.get(nacionalidade, 'email_feedback.html')
 
@@ -988,7 +994,7 @@ def editar_segundo_email():
         logger.info("Getting template content for segundo email")
         # Get template content using the same logic as get_email_template_content
         template_content = {}
-        nacionalidades = ['português', 'inglês', 'francês', 'alemão']
+        nacionalidades = ['português', 'inglês', 'francês', 'alemão', 'dinamarques', 'espanhol', 'noruegues', 'polaco', 'sueco', 'outro']
         import re  # Move import to top of function
 
         for nacionalidade in nacionalidades:
@@ -999,11 +1005,12 @@ def editar_segundo_email():
                     'inglês': 'email_feedback_internacional_ingles.html',
                     'francês': 'email_feedback_internacional_frances.html',
                     'alemão': 'email_feedback_internacional_alemao.html',
-                    'dinamarques': "Tak for din dykkeroplevelse!",
-                    'espanhol': "¡Gracias por tu experiencia de buceo!",
-                    'noruegues': "Takk for din dykkeopplevelse!",
-                    'polaco': "Dziękujemy za Twoje doświadczenie nurkowe!",
-                    'sueco': "Tack för din dykupplevelse!",
+                    'dinamarques': 'email_feedback_internacional_dinamarques.html',
+                    'espanhol': 'email_feedback_internacional_espanhol.html',
+                    'noruegues': 'email_feedback_internacional_noruegues.html',
+                    'polaco': 'email_feedback_internacional_polaco.html',
+                    'sueco': 'email_feedback_internacional_sueco.html',
+                    'outro': 'email_feedback_internacional_ingles.html',  # Use English template for "Other"
                 }
                 template_file = template_files.get(nacionalidade, 'email_feedback.html')
 
@@ -1057,6 +1064,7 @@ def edit_email_template():
             noruegues_content = request.form.get('noruegues_content', '')
             polaco_content = request.form.get('polaco_content', '')
             sueco_content = request.form.get('sueco_content', '')
+            outro_content = request.form.get('outro_content', '')
 
             editing_template = session.get('editing_template', 'primeiro')
 
@@ -1094,6 +1102,9 @@ def edit_email_template():
                 if sueco_content.strip():
                     templates_to_save.append(
                         {'nacionalidade': 'sueco', 'tipo': editing_template, 'conteudo': sueco_content})
+                if outro_content.strip():
+                    templates_to_save.append(
+                        {'nacionalidade': 'outro', 'tipo': editing_template, 'conteudo': outro_content})
 
                 # Delete existing templates for this type
                 supabase.table("email_templates").delete().eq("tipo", editing_template).execute()
@@ -1121,7 +1132,7 @@ def edit_email_template():
     template_content = {}
 
     # Always load templates from files
-    nacionalidades = ['português', 'inglês', 'francês', 'alemão','dinamarques', 'espanhol', 'noruegues', 'polaco','sueco']
+    nacionalidades = ['português', 'inglês', 'francês', 'alemão','dinamarques', 'espanhol', 'noruegues', 'polaco','sueco', 'outro']
     import re  # Move import to top of function
 
     for nacionalidade in nacionalidades:
@@ -1137,6 +1148,7 @@ def edit_email_template():
                 'noruegues': 'email_feedback_internacional_noruegues.html',
                 'polaco': 'email_feedback_internacional_polaco.html',
                 'sueco': 'email_feedback_internacional_sueco.html',
+                'outro': 'email_feedback_internacional_ingles.html',  # Use English template for "Other"
             }
             template_file = template_files.get(nacionalidade, 'email_feedback.html')
 
@@ -1181,6 +1193,7 @@ def edit_email_template():
         'noruegues': 'default',
         'polaco': 'default',
         'sueco': 'default',
+        'outro': 'default',
     }
 
     # Debug: Print template content lengths

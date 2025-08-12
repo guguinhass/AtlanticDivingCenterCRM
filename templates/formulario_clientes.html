@@ -191,8 +191,12 @@
                 <label class="form-check-label" for="dinamarques">Dinamarquês</label>
             </div>
              <div class="form-check">
-                <input class="form-check-input" type="radio" name="nacionalidade" id="suece" value="sueco">
+                <input class="form-check-input" type="radio" name="nacionalidade" id="sueco" value="sueco">
                 <label class="form-check-label" for="sueco">Sueco</label>
+            </div>
+             <div class="form-check">
+                <input class="form-check-input" type="radio" name="nacionalidade" id="outro" value="outro">
+                <label class="form-check-label" for="outro">Outro</label>
             </div>
         </div>
 
@@ -306,6 +310,7 @@
                               onsubmit="return confirm('Tem certeza que deseja remover {{ cliente.nome }}?');">
                             <button type="submit" class="btn btn-sm btn-danger">Remover Cliente</button>
                         </form>
+
                     </td>
                 </tr>
             {% else %}
