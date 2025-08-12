@@ -121,7 +121,8 @@
                         <button type="button" class="btn btn-outline-primary btn-sm" onclick="attachImage()">
                             <i class="fas fa-image"></i> Anexar Imagem
                         </button>
-                        <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
+                        <input type="file" id="imageInput" accept="image/*" style="display: none;"
+                               onchange="handleImageUpload(this)">
                         <small class="text-muted d-block mt-1">
                             <i class="fas fa-info-circle"></i> As imagens serão enviadas como anexos separados no email.
                         </small>
@@ -186,7 +187,7 @@
                                             <button type="button" class="btn btn-outline-success btn-sm"
                                                     onclick="uploadMarketingExcelEmails()" id="uploadMarketingBtn"
                                                     disabled>
-                                                📥 Carregar 
+                                                📥 Carregar
                                             </button>
                                         </div>
                                     </div>
@@ -459,52 +460,52 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
     // Handle form submission
     document.getElementById('marketingForm').addEventListener('submit', function (e) {
         e.preventDefault(); // Always prevent default to handle with AJAX
-        
+
         if (!sendMarketingEmail()) {
             return;
         }
-        
+
         // Create FormData from the form
         const formData = new FormData(this);
-        
+
         // Add attachments to form data
         emailAttachments.forEach((attachment, index) => {
             formData.append(`attachment_${index}`, attachment.file);
         });
-        
+
         // Show loading state
         const submitBtn = this.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '📤 Enviando...';
         submitBtn.disabled = true;
-        
+
         // Send the form data via AJAX
         fetch('{{ url_for("marketing_emails") }}', {
             method: 'POST',
             body: formData
         })
-        .then(response => {
-            if (response.redirected) {
-                window.location.href = response.url;
-            } else {
-                return response.text();
-            }
-        })
-        .then(html => {
-            if (html) {
-                // Replace the page content with the response
-                document.documentElement.innerHTML = html;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('❌ Erro ao enviar marketing email: ' + error.message);
-        })
-        .finally(() => {
-            // Restore button state
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        });
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    return response.text();
+                }
+            })
+            .then(html => {
+                if (html) {
+                    // Replace the page content with the response
+                    document.documentElement.innerHTML = html;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('❌ Erro ao enviar marketing email: ' + error.message);
+            })
+            .finally(() => {
+                // Restore button state
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
     });
 
     // Auto-validate emails when typing
@@ -704,6 +705,7 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
     }
 
     // Load email list to textarea
+    // Load email list to textarea (with merge functionality)
     function loadEmailList(listName) {
         fetch('{{ url_for("get_marketing_email_lists") }}')
             .then(response => response.json())
@@ -716,8 +718,37 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
                 const list = data.lists.find(l => l.list_name === listName);
                 if (list) {
                     const bulkEmailsTextarea = document.getElementById('bulkEmails');
-                    bulkEmailsTextarea.value = list.emails.join('\n');
-                    alert(`✅ Lista "${listName}" carregada com ${list.email_count} emails!`);
+
+                    // Get existing emails from textarea
+                    const existingEmailText = bulkEmailsTextarea.value.trim();
+                    const existingEmails = existingEmailText ? parseEmails(existingEmailText) : [];
+
+                    // Get new emails from the list
+                    const newEmails = list.emails;
+
+                    // Merge emails and remove duplicates
+                    const allEmails = [...existingEmails, ...newEmails];
+                    const uniqueEmails = [...new Set(allEmails.map(email => email.toLowerCase()))];
+
+                    // Convert back to original case (keep first occurrence case)
+                    const mergedEmails = uniqueEmails.map(lowerEmail => {
+                        return allEmails.find(email => email.toLowerCase() === lowerEmail);
+                    });
+
+                    // Update textarea with merged list
+                    bulkEmailsTextarea.value = mergedEmails.join('\n');
+
+                    // Show confirmation message
+                    const addedCount = mergedEmails.length - existingEmails.length;
+                    if (addedCount > 0) {
+                        alert(`✅ Lista "${listName}" adicionada! ${addedCount} novos emails adicionados. Total: ${mergedEmails.length} emails únicos.`);
+                    } else {
+                        alert(`ℹ️ Lista "${listName}" carregada, mas todos os emails já estavam na lista. Total: ${mergedEmails.length} emails.`);
+                    }
+
+                    // Trigger email validation display
+                    bulkEmailsTextarea.dispatchEvent(new Event('input'));
+
                 } else {
                     alert(`❌ Lista "${listName}" não encontrada.`);
                 }
@@ -875,14 +906,14 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
                 input.value = '';
                 return;
             }
-            
+
             // Validate file size (max 5MB)
             if (file.size > 5 * 1024 * 1024) {
                 alert('A imagem deve ter menos de 5MB.');
                 input.value = '';
                 return;
             }
-            
+
             // Add file to attachments list
             addAttachmentToList(file);
         }
@@ -893,7 +924,7 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
     function addAttachmentToList(file) {
         const attachmentId = 'attachment_' + Date.now();
         const fileSize = (file.size / 1024).toFixed(1) + ' KB';
-        
+
         // Add to attachments array
         emailAttachments.push({
             id: attachmentId,
@@ -902,7 +933,7 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
             size: fileSize,
             type: file.type
         });
-        
+
         // Create attachment item HTML
         const attachmentItem = document.createElement('div');
         attachmentItem.className = 'attachment-item d-flex align-items-center justify-content-between p-2 border-bottom';
@@ -919,7 +950,7 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
                 <i class="fas fa-times"></i>
             </button>
         `;
-        
+
         // Add to attachment list
         document.getElementById('attachmentItems').appendChild(attachmentItem);
         document.getElementById('attachmentList').style.display = 'block';
@@ -928,13 +959,13 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
     function removeAttachment(attachmentId) {
         // Remove from attachments array
         emailAttachments = emailAttachments.filter(att => att.id !== attachmentId);
-        
+
         // Remove from DOM
         const attachmentItem = document.getElementById(attachmentId);
         if (attachmentItem) {
             attachmentItem.remove();
         }
-        
+
         // Hide attachment list if empty
         if (emailAttachments.length === 0) {
             document.getElementById('attachmentList').style.display = 'none';
