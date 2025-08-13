@@ -382,8 +382,8 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
         document.getElementById('emailStats').style.display = 'block';
 
         // Show results
-        let message = `<strong>🔍 Validação de Emails:</strong><br>`;
-        message += `✅ ${validCount} emails válidos<br>`;
+        let message = `🔍 Validação de Emails`;
+        message += `✅ ${validCount} emails válidos`;
         if (invalidCount > 0) {
             message += `❌ ${invalidCount} emails inválidos: ${invalidEmails.join(', ')}`;
         }
@@ -393,7 +393,7 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
 
     // Clear email list
     function clearEmailList() {
-        if (confirm('Tem certeza que deseja limpar a lista de emails? Esta ação irá remover permanentemente todos os emails salvos.')) {
+        if (confirm('Tem certeza que deseja limpar a lista de emails?')) {
             // Create a form to submit the clear request
             var form = document.createElement('form');
             form.method = 'POST';
