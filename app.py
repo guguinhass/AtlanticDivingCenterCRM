@@ -149,6 +149,43 @@ def logout():
     return redirect(url_for('login'))
 
 
+# --- Helper Functions ---
+def fetch_all_marketing_emails_paginated(list_name=None):
+    """
+    Fetch all marketing email records using pagination to overcome Supabase's 1000 row default limit.
+    
+    Args:
+        list_name (str, optional): If provided, filter by specific list name
+        
+    Returns:
+        list: All email records from the marketing_email_lists table
+    """
+    all_records = []
+    page_size = 1000
+    offset = 0
+    
+    while True:
+        query = supabase.table("marketing_email_lists").select("*")
+        
+        if list_name:
+            query = query.eq("list_name", list_name)
+            
+        response = query.range(offset, offset + page_size - 1).execute()
+        
+        if not response.data:
+            break
+            
+        all_records.extend(response.data)
+        
+        # If we got less than page_size records, we've reached the end
+        if len(response.data) < page_size:
+            break
+            
+        offset += page_size
+    
+    return all_records
+
+
 # --- Email Functions ---
 def get_email_template_content(nacionalidade, template_type='primeiro'):
     """Get email template content from database or fallback to default templates"""
@@ -206,17 +243,17 @@ def enviar_email(destinatario, assunto, nome, internacional, template_type='prim
         msg['Subject'] = assunto
         msg.attach(MIMEText(corpo_html, "html"))
 
+        # Use SMTP settings from environment variables
         with smtplib.SMTP_SSL(app.config['SMTP_SERVER'], app.config['SMTP_PORT']) as server:
             server.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
             server.send_message(msg)
 
         logger.info(
-            f"EMAIL SENT: {destinatario} | Subject: {assunto} | Template: {template_type} | Time: {datetime.now()}")
+            f"EMAIL SENT: {destinatario} | Subject: {assunto} | Template: {template_type} | From: {app.config['SMTP_USERNAME']} | Time: {datetime.now()}")
         return True
     except Exception as e:
         logger.error(f"Email failed: {str(e)}")
         return False
-
 
 def email_feedback(cliente, template_type='primeiro'):
     assunto = {
@@ -565,17 +602,17 @@ def enviar_email_personalizado_aux(destinatario, assunto, conteudo, attachments=
                 except Exception as attach_error:
                     logger.error(f"Error attaching file {attachment.filename}: {str(attach_error)}")
 
-        # Send email
+        # Send email using SMTP settings from environment variables
         with smtplib.SMTP_SSL(app.config['SMTP_SERVER'], app.config['SMTP_PORT']) as server:
             server.login(app.config['SMTP_USERNAME'], app.config['SMTP_PASSWORD'])
             server.send_message(msg)
 
         logger.info(
-            f"Email sent successfully to {destinatario} with {len(attachments) if attachments else 0} attachments")
+            f"Custom email sent successfully to {destinatario} with {len(attachments) if attachments else 0} attachments from {app.config['SMTP_USERNAME']}")
         return True
 
     except Exception as e:
-        logger.error(f"Email personalizado failed: {str(e)}")
+        logger.error(f"Custom email failed: {str(e)}")
         return False
 
 
@@ -783,8 +820,14 @@ def upload_excel_emails():
             flash('Por favor, selecione um arquivo Excel (.xlsx ou .xls).', 'danger')
             return redirect(url_for('marketing_emails'))
 
-        # Read the Excel file
-        df = pd.read_excel(file)
+        # Get sheet name from form
+        sheet_name = request.form.get('sheet_name', '').strip()
+        
+        # Read the Excel file from specific sheet
+        if sheet_name:
+            df = pd.read_excel(file, sheet_name=sheet_name)
+        else:
+            df = pd.read_excel(file)  # Default to first sheet
 
         # Get column name from form
         column_name = request.form.get('email_column', '').strip()
@@ -827,10 +870,10 @@ def upload_excel_emails():
 
 
 # ---------View collumns from excel files---------
-@app.route('/preview-excel-columns', methods=['POST'])
+@app.route('/preview-excel-sheets', methods=['POST'])
 @login_required
-def preview_excel_columns():
-    """Preview Excel file columns without saving emails"""
+def preview_excel_sheets():
+    """Preview Excel file sheets"""
     if not session.get('is_admin'):
         return {'error': 'Unauthorized'}, 403
 
@@ -845,8 +888,66 @@ def preview_excel_columns():
         if not file.filename.endswith(('.xlsx', '.xls')):
             return {'error': 'Por favor, selecione um arquivo Excel (.xlsx ou .xls).'}, 400
 
-        # Read the Excel file
-        df = pd.read_excel(file)
+        # Read all sheet names from the Excel file
+        excel_file = pd.ExcelFile(file)
+        sheet_names = excel_file.sheet_names
+
+        # Get basic info about each sheet
+        sheets_info = []
+        for sheet_name in sheet_names:
+            try:
+                df = pd.read_excel(file, sheet_name=sheet_name, nrows=0)  # Just get column info
+                row_count = len(pd.read_excel(file, sheet_name=sheet_name))
+                sheets_info.append({
+                    'name': sheet_name,
+                    'columns': list(df.columns),
+                    'row_count': row_count
+                })
+            except Exception as sheet_error:
+                logger.error(f"Error reading sheet {sheet_name}: {str(sheet_error)}")
+                sheets_info.append({
+                    'name': sheet_name,
+                    'columns': [],
+                    'row_count': 0,
+                    'error': str(sheet_error)
+                })
+
+        return {
+            'sheets': sheets_info,
+            'filename': file.filename
+        }
+
+    except Exception as e:
+        logger.error(f"Error previewing Excel file: {str(e)}")
+        return {'error': f'Erro ao processar arquivo: {str(e)}'}, 500
+
+
+@app.route('/preview-excel-columns', methods=['POST'])
+@login_required
+def preview_excel_columns():
+    """Preview Excel file columns from a specific sheet"""
+    if not session.get('is_admin'):
+        return {'error': 'Unauthorized'}, 403
+
+    try:
+        if 'excel_file' not in request.files:
+            return {'error': 'Nenhum arquivo selecionado.'}, 400
+
+        file = request.files['excel_file']
+        if file.filename == '':
+            return {'error': 'Nenhum arquivo selecionado.'}, 400
+
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            return {'error': 'Por favor, selecione um arquivo Excel (.xlsx ou .xls).'}, 400
+
+        # Get sheet name from request
+        sheet_name = request.form.get('sheet_name', None)
+        
+        # Read the Excel file from specific sheet
+        if sheet_name:
+            df = pd.read_excel(file, sheet_name=sheet_name)
+        else:
+            df = pd.read_excel(file)  # Default to first sheet
 
         # Get column names and first few values
         columns_info = []
@@ -866,7 +967,8 @@ def preview_excel_columns():
 
         return {
             'columns': columns_info,
-            'filename': file.filename
+            'filename': file.filename,
+            'sheet_name': sheet_name or 'Default'
         }
 
     except Exception as e:
@@ -1442,14 +1544,15 @@ def marketing_emails():
     response = supabase.table("clientes").select("*").execute()
     client_count = len(response.data)
 
-    # Get marketing email lists from Supabase
+    # Get marketing email lists from Supabase with pagination to handle large datasets
     email_lists = []
     try:
-        lists_response = supabase.table("marketing_email_lists").select("*").execute()
+        # Fetch all records using pagination helper function
+        all_records = fetch_all_marketing_emails_paginated()
 
         # Group emails by list name
         lists = {}
-        for record in lists_response.data:
+        for record in all_records:
             list_name = record['list_name']
             if list_name not in lists:
                 lists[list_name] = []
@@ -1463,7 +1566,7 @@ def marketing_emails():
                 'emails': emails
             })
 
-        logger.info(f"Loaded {len(email_lists)} marketing email lists from Supabase")
+        logger.info(f"Loaded {len(email_lists)} marketing email lists with {len(all_records)} total email records from Supabase")
     except Exception as e:
         logger.error(f"Error loading marketing email lists: {str(e)}")
 
@@ -1502,11 +1605,28 @@ def get_marketing_email_lists():
         return {'error': 'Unauthorized'}, 403
 
     try:
-        response = supabase.table("marketing_email_lists").select("*").execute()
+        # Get all marketing email lists using pagination to handle large datasets
+        all_records = []
+        page_size = 1000
+        offset = 0
+        
+        while True:
+            response = supabase.table("marketing_email_lists").select("*").range(offset, offset + page_size - 1).execute()
+            
+            if not response.data:
+                break
+                
+            all_records.extend(response.data)
+            
+            # If we got less than page_size records, we've reached the end
+            if len(response.data) < page_size:
+                break
+                
+            offset += page_size
 
         # Group emails by list name
         lists = {}
-        for record in response.data:
+        for record in all_records:
             list_name = record['list_name']
             if list_name not in lists:
                 lists[list_name] = []
@@ -1560,14 +1680,31 @@ def marketing_email_editor():
     if not session.get('is_admin'):
         return redirect(url_for('index'))
 
-    # Get all existing lists
+    # Get all existing lists using pagination
     email_lists = []
     try:
-        lists_response = supabase.table("marketing_email_lists").select("*").execute()
+        # Fetch all records using pagination to overcome Supabase's 1000 row default limit
+        all_records = []
+        page_size = 1000
+        offset = 0
+        
+        while True:
+            lists_response = supabase.table("marketing_email_lists").select("*").range(offset, offset + page_size - 1).execute()
+            
+            if not lists_response.data:
+                break
+                
+            all_records.extend(lists_response.data)
+            
+            # If we got less than page_size records, we've reached the end
+            if len(lists_response.data) < page_size:
+                break
+                
+            offset += page_size
 
         # Group emails by list name
         lists = {}
-        for record in lists_response.data:
+        for record in all_records:
             list_name = record['list_name']
             if list_name not in lists:
                 lists[list_name] = []
@@ -1581,7 +1718,7 @@ def marketing_email_editor():
                 'emails': emails
             })
 
-        logger.info(f"Loaded {len(email_lists)} marketing email lists for editor")
+        logger.info(f"Loaded {len(email_lists)} marketing email lists with {len(all_records)} total email records for editor")
     except Exception as e:
         logger.error(f"Error loading marketing email lists for editor: {str(e)}")
 
@@ -1597,11 +1734,28 @@ def get_marketing_lists_api():
         return {'error': 'Unauthorized'}, 403
 
     try:
-        response = supabase.table("marketing_email_lists").select("*").execute()
+        # Fetch all records using pagination to overcome Supabase's 1000 row default limit
+        all_records = []
+        page_size = 1000
+        offset = 0
+        
+        while True:
+            response = supabase.table("marketing_email_lists").select("*").range(offset, offset + page_size - 1).execute()
+            
+            if not response.data:
+                break
+                
+            all_records.extend(response.data)
+            
+            # If we got less than page_size records, we've reached the end
+            if len(response.data) < page_size:
+                break
+                
+            offset += page_size
 
         # Group emails by list name
         lists = {}
-        for record in response.data:
+        for record in all_records:
             list_name = record['list_name']
             if list_name not in lists:
                 lists[list_name] = []
@@ -1631,11 +1785,28 @@ def get_marketing_list_api(list_name):
         return {'error': 'Unauthorized'}, 403
 
     try:
-        response = supabase.table("marketing_email_lists").select("*").eq("list_name", list_name).execute()
+        # Get specific marketing list using pagination to handle large lists
+        all_records = []
+        page_size = 1000
+        offset = 0
+        
+        while True:
+            response = supabase.table("marketing_email_lists").select("*").eq("list_name", list_name).range(offset, offset + page_size - 1).execute()
+            
+            if not response.data:
+                break
+                
+            all_records.extend(response.data)
+            
+            # If we got less than page_size records, we've reached the end
+            if len(response.data) < page_size:
+                break
+                
+            offset += page_size
 
         # Build rich entries if optional fields exist; fall back to simple strings
         entries = []
-        for record in response.data:
+        for record in all_records:
             email_value = record.get('email')
             # Some rows might be placeholders (email is None)
             if not email_value:
@@ -1777,47 +1948,125 @@ def upload_marketing_emails_excel():
     Enhanced version that handles duplicates gracefully
     """
     try:
+        # Debug logging
+        logger.info(f"Upload request received. Files: {list(request.files.keys())}")
+        logger.info(f"Form data: {dict(request.form)}")
+        
         if 'excel_file' not in request.files:
+            logger.error("No excel_file in request.files")
             return jsonify({'error': 'No file uploaded'}), 400
 
         file = request.files['excel_file']
         email_column = request.form.get('email_column')
+        sheet_name = request.form.get('sheet_name', '').strip()
         list_name = request.form.get('list_name', 'Lista de Marketing')
         replace_existing = request.form.get('replace_existing', 'false').lower() == 'true'
 
-        if not file or not email_column:
-            return jsonify({'error': 'Missing file or email column'}), 400
+        logger.info(f"Parameters - file: {file.filename if file else 'None'}, email_column: {email_column}, sheet_name: {sheet_name}, list_name: {list_name}")
 
-        # Read Excel file
-        df = pd.read_excel(file)
+        if not file or file.filename == '':
+            logger.error("No file selected or empty filename")
+            return jsonify({'error': 'No file selected'}), 400
+            
+        if not email_column:
+            logger.error("No email column specified")
+            return jsonify({'error': 'Email column not specified'}), 400
+            
+        if not list_name or list_name.strip() == '':
+            logger.error("No list name specified")
+            return jsonify({'error': 'List name not specified'}), 400
+
+        # Read Excel file from specific sheet
+        try:
+            if sheet_name:
+                logger.info(f"Reading Excel file with sheet: {sheet_name}")
+                df = pd.read_excel(file, sheet_name=sheet_name)
+            else:
+                logger.info("Reading Excel file (default sheet)")
+                df = pd.read_excel(file)  # Default to first sheet
+                
+            logger.info(f"Excel file read successfully. Shape: {df.shape}, Columns: {list(df.columns)}")
+        except Exception as e:
+            logger.error(f"Error reading Excel file: {e}")
+            return jsonify({'error': f'Error reading Excel file: {str(e)}'}), 400
+
+        # Check if email column exists
+        if email_column not in df.columns:
+            logger.error(f"Column '{email_column}' not found in Excel file. Available columns: {list(df.columns)}")
+            return jsonify({'error': f'Column "{email_column}" not found in the Excel file'}), 400
 
         # Extract emails from specified column
-        emails = df[email_column].dropna().astype(str).tolist()
+        try:
+            emails = df[email_column].dropna().astype(str).tolist()
+            logger.info(f"Extracted {len(emails)} emails from column '{email_column}'")
+        except Exception as e:
+            logger.error(f"Error extracting emails from column '{email_column}': {e}")
+            return jsonify({'error': f'Error extracting emails from column: {str(e)}'}), 400
 
         # Clean and validate emails
         valid_emails = []
+        invalid_emails = []
+        
         for email in emails:
-            email = email.strip().lower()
-            if '@' in email and '.' in email:
-                valid_emails.append(email)
+            email_str = str(email).strip().lower()
+            # Skip empty or NaN values
+            if email_str in ['', 'nan', 'none', 'null']:
+                continue
+                
+            # Basic email validation
+            if '@' in email_str and '.' in email_str and len(email_str) > 5:
+                # More thorough validation
+                import re
+                email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                if re.match(email_pattern, email_str):
+                    valid_emails.append(email_str)
+                else:
+                    invalid_emails.append(email_str)
+            else:
+                invalid_emails.append(email_str)
 
+        logger.info(f"Email validation results - Valid: {len(valid_emails)}, Invalid: {len(invalid_emails)}")
+        
         if not valid_emails:
-            return jsonify({'error': 'No valid emails found in the selected column'}), 400
+            error_msg = f'No valid emails found in the selected column. Found {len(invalid_emails)} invalid entries.'
+            if invalid_emails[:5]:  # Show first 5 invalid emails as examples
+                error_msg += f' Examples of invalid entries: {", ".join(invalid_emails[:5])}'
+            logger.error(error_msg)
+            return jsonify({'error': error_msg}), 400
 
         # Handle database operations
+        logger.info(f"Processing {len(valid_emails)} valid emails for list '{list_name}' (replace_existing: {replace_existing})")
+        
         if replace_existing:
             # Delete existing emails for this list first
             try:
-                supabase.table('marketing_email_lists').delete().eq('list_name', list_name).execute()
-                logger.info(f"Deleted existing list: {list_name}")
+                delete_result = supabase.table('marketing_email_lists').delete().eq('list_name', list_name).execute()
+                logger.info(f"Deleted existing list: {list_name}, affected rows: {len(delete_result.data) if delete_result.data else 0}")
             except Exception as e:
                 logger.warning(f"Could not delete existing list (may not exist): {e}")
         else:
-            # Check for existing emails to avoid duplicates
+            # Check for existing emails to avoid duplicates using pagination
             try:
-                existing_emails = supabase.table('marketing_email_lists').select('email').eq('list_name',
-                                                                                             list_name).execute()
-                existing_email_set = {record['email'] for record in existing_emails.data if record['email']}
+                existing_email_set = set()
+                page_size = 1000
+                offset = 0
+                
+                while True:
+                    existing_emails = supabase.table('marketing_email_lists').select('email').eq('list_name', list_name).range(offset, offset + page_size - 1).execute()
+                    
+                    if not existing_emails.data:
+                        break
+                        
+                    for record in existing_emails.data:
+                        if record['email']:
+                            existing_email_set.add(record['email'])
+                    
+                    # If we got less than page_size records, we've reached the end
+                    if len(existing_emails.data) < page_size:
+                        break
+                        
+                    offset += page_size
+                
                 # Filter out emails that already exist
                 valid_emails = [email for email in valid_emails if email not in existing_email_set]
                 logger.info(f"Filtered out {len(existing_email_set)} existing emails from list: {list_name}")
@@ -1856,23 +2105,61 @@ def upload_marketing_emails_excel():
         if error_count > 0:
             message_parts.append(f"{error_count} erros encontrados")
 
+        logger.info(f"Upload completed - Success: {successful_inserts}, Duplicates: {duplicate_count}, Errors: {error_count}")
+        
         if successful_inserts == 0 and duplicate_count == 0:
-            return jsonify({'error': 'Nenhum email foi processado'}), 400
+            error_msg = f'Nenhum email foi processado. Total de emails válidos: {len(valid_emails)}, Erros: {error_count}'
+            logger.error(error_msg)
+            return jsonify({'error': error_msg}), 400
 
-        return jsonify({
+        response_data = {
             'success': True,
             'message': f"Lista '{list_name}' atualizada: " + ", ".join(message_parts),
             'details': {
                 'successful_inserts': successful_inserts,
                 'duplicates_skipped': duplicate_count,
                 'errors': error_count,
-                'total_processed': len(valid_emails)
+                'total_processed': len(valid_emails),
+                'invalid_emails_found': len(invalid_emails)
             }
-        })
+        }
+        
+        logger.info(f"Returning success response: {response_data}")
+        return jsonify(response_data)
 
     except Exception as e:
         logger.error(f"Error uploading marketing emails: {e}")
         return jsonify({'error': f'Erro ao processar arquivo: {str(e)}'}), 500
+
+
+# Debug endpoint to test upload parameters
+@app.route('/debug-upload-params', methods=['POST'])
+@login_required
+def debug_upload_params():
+    """Debug endpoint to see what parameters are being sent"""
+    try:
+        logger.info("=== DEBUG UPLOAD PARAMS ===")
+        logger.info(f"Files: {list(request.files.keys())}")
+        logger.info(f"Form data: {dict(request.form)}")
+        
+        response = {
+            'files': list(request.files.keys()),
+            'form_data': dict(request.form),
+            'file_details': {}
+        }
+        
+        for key, file in request.files.items():
+            response['file_details'][key] = {
+                'filename': file.filename,
+                'content_type': file.content_type,
+                'has_content': bool(file.read(1))  # Check if file has content
+            }
+            file.seek(0)  # Reset file pointer
+            
+        return jsonify(response)
+    except Exception as e:
+        logger.error(f"Debug endpoint error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/marcar-email-manual/<email>', methods=['POST'])
@@ -1893,6 +2180,14 @@ def marcar_email_manual(email):
         flash("O email já estava marcado como enviado.", "info")
 
     return redirect(url_for("index"))
+
+
+
+
+
+
+
+
 
 
 # -------Starter--------

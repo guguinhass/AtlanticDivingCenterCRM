@@ -116,6 +116,67 @@
             margin: 10px 0;
             font-size: 14px;
         }
+        
+        /* Email Search Styles */
+        #emailSearchBox {
+            border-radius: 0.375rem 0 0 0.375rem;
+            transition: all 0.2s ease;
+        }
+
+        #emailSearchBox:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            background-color: #fff;
+        }
+
+        #emailSearchBox.has-results {
+            border-color: #28a745;
+            background-color: #f8fff9;
+        }
+
+        #emailSearchBox.no-results {
+            border-color: #dc3545;
+            background-color: #fff5f5;
+        }
+
+        .input-group .btn:last-child {
+            border-radius: 0 0.375rem 0.375rem 0;
+        }
+
+        #searchResults {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 8px 12px;
+            font-size: 0.875rem;
+            animation: slideDown 0.2s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #searchResults .btn-group {
+            margin-left: 10px;
+        }
+
+        /* Highlight matched rows */
+        .search-highlight {
+            background-color: #fff3cd !important;
+            border: 2px solid #ffc107 !important;
+        }
+
+        .search-current-match {
+            background-color: #d1ecf1 !important;
+            border: 2px solid #007bff !important;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -206,6 +267,9 @@
                     <button class="btn btn-light btn-sm" onclick="addNewRow()">
                         <i class="fas fa-plus"></i> Adicionar Email
                     </button>
+                    <button class="btn btn-warning btn-sm" onclick="addTestEmails()">
+                        <i class="fas fa-flask"></i> Emails de Teste
+                    </button>
                     <button class="btn btn-success btn-sm" onclick="saveList()">
                         <i class="fas fa-save"></i> Salvar
                     </button>
@@ -218,6 +282,34 @@
             <div class="stats-bar" id="statsBar">
                 <i class="fas fa-info-circle"></i>
                 <span id="statsText">Carregando estatísticas...</span>
+            </div>
+            
+            <!-- Email Search -->
+            <div class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control" id="emailSearchBox" 
+                           placeholder="Pesquisar email na tabela..." 
+                           title="Digite para pesquisar emails. Use Enter/Shift+Enter para navegar, Escape para limpar"
+                           oninput="searchEmailInTable()" 
+                           onkeydown="handleSearchNavigation(event)">
+                    <button class="btn btn-outline-secondary" type="button" onclick="clearEmailSearch()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="searchResults" class="small text-muted mt-2" style="display: none;">
+                    <span id="searchResultText"></span>
+                    <div class="btn-group btn-group-sm ms-2" role="group">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="navigateSearchResults('prev')">
+                            <i class="fas fa-chevron-up"></i> Anterior
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="navigateSearchResults('next')">
+                            <i class="fas fa-chevron-down"></i> Próximo
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <!-- Email Table -->
@@ -314,12 +406,22 @@
         document.getElementById('emailEditor').style.display = 'block';
         document.getElementById('currentListName').textContent = currentList.list_name;
         populateTable();
+        
+        // Clear any existing search when loading new list
+        if (typeof clearEmailSearch === 'function') {
+            clearEmailSearch();
+        }
     }
 
     // Populate table with emails
     function populateTable() {
         const tbody = document.getElementById('emailTableBody');
         tbody.innerHTML = '';
+
+        // Clear any existing search highlights
+        if (typeof clearAllHighlights === 'function') {
+            clearAllHighlights();
+        }
 
         if (currentList.emails.length === 0) {
             document.getElementById('emptyState').style.display = 'block';
@@ -571,6 +673,209 @@
             e.returnValue = '';
         }
     });
+
+    // Email Search Functionality
+    let searchMatches = [];
+    let currentMatchIndex = -1;
+    let lastSearchTerm = '';
+
+    function searchEmailInTable() {
+        const searchBox = document.getElementById('emailSearchBox');
+        const searchResults = document.getElementById('searchResults');
+        const searchResultText = document.getElementById('searchResultText');
+        
+        const searchTerm = searchBox.value.trim().toLowerCase();
+        
+        // Clear previous search if search term is empty
+        if (!searchTerm) {
+            searchResults.style.display = 'none';
+            searchBox.className = searchBox.className.replace(/\b(has-results|no-results)\b/g, '');
+            clearAllHighlights();
+            searchMatches = [];
+            currentMatchIndex = -1;
+            lastSearchTerm = '';
+            return;
+        }
+        
+        // Always search when term changes
+        lastSearchTerm = searchTerm;
+        currentMatchIndex = -1;
+        searchMatches = [];
+        clearAllHighlights();
+        
+        const rows = document.querySelectorAll('#emailTableBody tr');
+        
+        // Find all matches
+        rows.forEach((row, rowIndex) => {
+            const emailInput = row.querySelector('input[type="email"]');
+            const nameInput = row.querySelector('input[placeholder="Nome (opcional)"]');
+            const phoneInput = row.querySelector('input[placeholder="Telefone (opcional)"]');
+            
+            const email = emailInput ? emailInput.value.toLowerCase() : '';
+            const name = nameInput ? nameInput.value.toLowerCase() : '';
+            const phone = phoneInput ? phoneInput.value.toLowerCase() : '';
+            
+            // Check if search term matches any field
+            if (email.includes(searchTerm) || name.includes(searchTerm) || phone.includes(searchTerm)) {
+                searchMatches.push({
+                    rowIndex: rowIndex,
+                    row: row,
+                    email: emailInput ? emailInput.value : '',
+                    name: nameInput ? nameInput.value : '',
+                    phone: phoneInput ? phoneInput.value : '',
+                    matchType: email.includes(searchTerm) ? 'email' : 
+                              name.includes(searchTerm) ? 'name' : 'phone'
+                });
+                
+                // Add highlight class
+                row.classList.add('search-highlight');
+            }
+        });
+        
+        // Update search results display
+        if (searchMatches.length > 0) {
+            currentMatchIndex = 0;
+            searchResults.style.display = 'block';
+            searchBox.className = searchBox.className.replace(/\b(has-results|no-results)\b/g, '') + ' has-results';
+            updateSearchResultsDisplay();
+            highlightCurrentMatch();
+        } else {
+            searchResults.style.display = 'block';
+            searchBox.className = searchBox.className.replace(/\b(has-results|no-results)\b/g, '') + ' no-results';
+            searchResultText.textContent = `Nenhum resultado encontrado para "${searchBox.value}"`;
+        }
+    }
+
+    function updateSearchResultsDisplay() {
+        const searchResultText = document.getElementById('searchResultText');
+        const searchBox = document.getElementById('emailSearchBox');
+        
+        if (searchMatches.length > 0) {
+            const currentMatch = searchMatches[currentMatchIndex];
+            const matchPreview = currentMatch.email.length > 25 ? 
+                currentMatch.email.substring(0, 25) + '...' : 
+                currentMatch.email;
+            
+            searchResultText.innerHTML = `
+                <strong>${currentMatchIndex + 1} de ${searchMatches.length}</strong> resultados para "<em>${searchBox.value}</em>"
+                <br><small class="text-muted">Linha ${currentMatch.rowIndex + 1}: ${matchPreview} (${currentMatch.matchType})</small>
+            `;
+        }
+    }
+
+    function highlightCurrentMatch() {
+        if (currentMatchIndex < 0 || currentMatchIndex >= searchMatches.length) return;
+        
+        // Remove current match highlight from all rows
+        document.querySelectorAll('.search-current-match').forEach(row => {
+            row.classList.remove('search-current-match');
+        });
+        
+        // Add current match highlight
+        const currentMatch = searchMatches[currentMatchIndex];
+        currentMatch.row.classList.add('search-current-match');
+        
+        // Scroll to the current match
+        currentMatch.row.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+    }
+
+    function navigateSearchResults(direction) {
+        if (searchMatches.length === 0) return;
+        
+        if (direction === 'next') {
+            currentMatchIndex = (currentMatchIndex + 1) % searchMatches.length;
+        } else if (direction === 'prev') {
+            currentMatchIndex = currentMatchIndex <= 0 ? searchMatches.length - 1 : currentMatchIndex - 1;
+        }
+        
+        updateSearchResultsDisplay();
+        highlightCurrentMatch();
+    }
+
+    function handleSearchNavigation(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            if (event.shiftKey) {
+                navigateSearchResults('prev');
+            } else {
+                navigateSearchResults('next');
+            }
+        } else if (event.key === 'Escape') {
+            clearEmailSearch();
+        }
+    }
+
+    function clearEmailSearch() {
+        const searchBox = document.getElementById('emailSearchBox');
+        const searchResults = document.getElementById('searchResults');
+        
+        searchBox.value = '';
+        searchBox.className = searchBox.className.replace(/\b(has-results|no-results)\b/g, '');
+        searchResults.style.display = 'none';
+        clearAllHighlights();
+        searchMatches = [];
+        currentMatchIndex = -1;
+        lastSearchTerm = '';
+    }
+
+    function clearAllHighlights() {
+        document.querySelectorAll('.search-highlight, .search-current-match').forEach(row => {
+            row.classList.remove('search-highlight', 'search-current-match');
+        });
+    }
+
+    // Global keyboard event listener for quick search access
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchBox = document.getElementById('emailSearchBox');
+        
+        // Global keydown listener for quick search access
+        document.addEventListener('keydown', function(e) {
+            // If user presses Ctrl+F or Cmd+F, focus the search box instead of browser search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                if (searchBox) {
+                    searchBox.focus();
+                }
+            }
+        });
+    });
+
+    // Test function to add sample emails for testing search
+    function addTestEmails() {
+        if (!currentList) {
+            alert('Por favor, crie ou carregue uma lista primeiro.');
+            return;
+        }
+
+        const testEmails = [
+            { email: 'joao.silva@gmail.com', name: 'João Silva', phone: '(11) 99999-1111' },
+            { email: 'maria.santos@hotmail.com', name: 'Maria Santos', phone: '(11) 99999-2222' },
+            { email: 'pedro.oliveira@yahoo.com', name: 'Pedro Oliveira', phone: '(11) 99999-3333' },
+            { email: 'ana.costa@outlook.com', name: 'Ana Costa', phone: '(11) 99999-4444' },
+            { email: 'carlos.ferreira@gmail.com', name: 'Carlos Ferreira', phone: '(11) 99999-5555' },
+            { email: 'lucia.pereira@company.com', name: 'Lúcia Pereira', phone: '(11) 99999-6666' },
+            { email: 'rafael.almeida@test.com', name: 'Rafael Almeida', phone: '(11) 99999-7777' },
+            { email: 'fernanda.rodrigues@example.org', name: 'Fernanda Rodrigues', phone: '(11) 99999-8888' },
+            { email: 'gustavo.lima@domain.net', name: 'Gustavo Lima', phone: '(11) 99999-9999' },
+            { email: 'patricia.souza@email.com', name: 'Patrícia Souza', phone: '(11) 99999-0000' }
+        ];
+        
+        if (currentList.emails.length > 0) {
+            if (!confirm('Isso irá substituir os emails existentes. Continuar?')) {
+                return;
+            }
+        }
+        
+        currentList.emails = testEmails;
+        populateTable();
+        updateStats();
+        hasUnsavedChanges = true;
+        
+        showStatus('✅ Emails de teste adicionados! Agora você pode testar a funcionalidade de pesquisa.', 'success');
+    }
 </script>
 
 </body>

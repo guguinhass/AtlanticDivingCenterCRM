@@ -78,6 +78,75 @@
             display: none;
             margin-top: 10px;
         }
+
+        /* Email Search Styles */
+        #emailSearchBox {
+            border-radius: 0.375rem 0 0 0.375rem;
+            transition: all 0.2s ease;
+        }
+
+        #emailSearchBox:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            background-color: #fff;
+        }
+
+        #emailSearchBox.has-results {
+            border-color: #28a745;
+            background-color: #f8fff9;
+        }
+
+        #emailSearchBox.no-results {
+            border-color: #dc3545;
+            background-color: #fff5f5;
+        }
+
+        .input-group .btn:last-child {
+            border-radius: 0 0.375rem 0.375rem 0;
+        }
+
+        #searchResults {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 8px 12px;
+            font-size: 0.875rem;
+            animation: slideDown 0.2s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #searchResults .btn-group {
+            margin-left: 10px;
+        }
+
+        #bulkEmails:focus {
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        /* Highlight selected text in textarea */
+        #bulkEmails::selection {
+            background-color: #007bff;
+            color: white;
+        }
+
+        /* Search box placeholder animation */
+        #emailSearchBox::placeholder {
+            transition: opacity 0.2s ease;
+        }
+
+        #emailSearchBox:focus::placeholder {
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -195,7 +264,7 @@
                                         <div class="mb-3">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" id="replaceExistingList"
-                                                       checked>
+                                                       >
                                                 <label class="form-check-label" for="replaceExistingList">
                                                     Substituir lista existente (se já existir)
                                                 </label>
@@ -204,8 +273,13 @@
                                             </div>
                                         </div>
                                         <div class="mb-3">
+                                            <button type="button" class="btn btn-outline-info btn-sm"
+                                                    onclick="previewMarketingExcelSheets()">
+                                                📋 Ver Planilhas
+                                            </button>
                                             <button type="button" class="btn btn-outline-primary btn-sm"
-                                                    onclick="previewMarketingExcelColumns()">
+                                                    onclick="previewMarketingExcelColumns()" id="previewColumnsBtn"
+                                                    disabled>
                                                 🔍 Pré-visualizar Colunas
                                             </button>
                                             <button type="button" class="btn btn-outline-success btn-sm"
@@ -224,6 +298,13 @@
                                         </div>
                                     </div>
                                     <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Planilha:</label>
+                                            <select class="form-control" id="marketingSheetSelect" disabled>
+                                                <option value="">Selecione uma planilha...</option>
+                                            </select>
+                                            <small class="text-muted">Escolha a planilha que contém os dados</small>
+                                        </div>
                                         <div class="mb-3">
                                             <label class="form-label">Coluna com emails:</label>
                                             <select class="form-control" id="marketingEmailColumnSelect" disabled>
@@ -301,7 +382,32 @@
                     <div class="row">
                         <div class="col-md-8">
                             <div class="mb-3">
-                                <label class="form-label">Emails (um por linha ou separados por vírgula):</label>
+                                <label class="form-label">Emails (um por linha):</label>
+                                <!-- Email Search Box -->
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="emailSearchBox" 
+                                           placeholder="Pesquisar email na lista..." 
+                                           title="Digite para pesquisar emails. Use Enter/Shift+Enter para navegar, Escape para limpar, Ctrl+F para focar aqui"
+                                           oninput="searchEmailInTextarea()" 
+                                           onkeydown="handleSearchNavigation(event)">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="clearEmailSearch()">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div id="searchResults" class="small text-muted mb-2" style="display: none;">
+                                    <span id="searchResultText"></span>
+                                    <div class="btn-group btn-group-sm ms-2" role="group">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="navigateSearchResults('prev')">
+                                            <i class="fas fa-chevron-up"></i> Anterior
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="navigateSearchResults('next')">
+                                            <i class="fas fa-chevron-down"></i> Próximo
+                                        </button>
+                                    </div>
+                                </div>
                                 <textarea class="form-control" id="bulkEmails" name="bulk_emails" rows="8"
                                           placeholder="Cole aqui os emails para marketing...
 Exemplo:
@@ -310,7 +416,9 @@ maria@email.com
 pedro@email.com
 
 Ou separados por vírgula:
-joao@email.com, maria@email.com, pedro@email.com"></textarea>
+joao@email.com, maria@email.com, pedro@email.com
+
+💡 Dica: Use a caixa de pesquisa acima para encontrar emails específicos!"></textarea>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -336,6 +444,12 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
                                 </button>
                                 <button type="button" class="btn btn-outline-info btn-sm" onclick="clearEmailList()">
                                     🗑️ Limpar Lista
+                                </button>
+                                <button type="button" class="btn btn-outline-warning btn-sm" onclick="addTestEmails()">
+                                    🧪 Emails de Teste
+                                </button>
+                                <button type="button" class="btn btn-outline-info btn-sm" onclick="debugUploadParams()">
+                                    🔍 Debug Upload
                                 </button>
                             </div>
                             <div id="emailStats" class="alert alert-info" style="display: none;">
@@ -618,6 +732,8 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
     // Marketing email lists handling functions
     let currentMarketingExcelFile = null;
     let currentMarketingColumns = null;
+    let currentMarketingSheets = null;
+    let selectedSheet = null;
     let existingEmailLists = [];
 
     // Load existing lists data
@@ -695,6 +811,9 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
                     document.getElementById('validEmails').textContent = validCount;
                     document.getElementById('invalidEmails').textContent = invalidCount;
                     document.getElementById('emailStats').style.display = 'block';
+                    
+                    // Clear any existing search when loading new list
+                    clearEmailSearch();
                 } else {
                     alert(`⚠️ A lista "${listName}" não contém emails.`);
                 }
@@ -720,6 +839,113 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
         }
     }
 
+    // Preview marketing Excel sheets
+    function previewMarketingExcelSheets() {
+        const fileInput = document.getElementById('marketingExcelFile');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert('❌ Por favor, selecione um arquivo Excel primeiro.');
+            return;
+        }
+
+        if (!file.name.match(/\.(xlsx|xls)$/)) {
+            alert('❌ Por favor, selecione um arquivo Excel válido (.xlsx ou .xls).');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('excel_file', file);
+
+        fetch('{{ url_for("preview_excel_sheets") }}', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(`❌ Erro: ${data.error}`);
+                    return;
+                }
+
+                currentMarketingExcelFile = file;
+                currentMarketingSheets = data.sheets;
+
+                // Populate sheet select
+                const sheetSelect = document.getElementById('marketingSheetSelect');
+                if (sheetSelect) {
+                    sheetSelect.innerHTML = '<option value="">Selecione uma planilha...</option>';
+
+                    data.sheets.forEach(sheet => {
+                        const option = document.createElement('option');
+                        option.value = sheet.name;
+                        option.textContent = `${sheet.name} (${sheet.row_count} linhas, ${sheet.columns.length} colunas)`;
+                        if (sheet.error) {
+                            option.textContent += ' - ERRO';
+                            option.disabled = true;
+                        }
+                        sheetSelect.appendChild(option);
+                    });
+
+                    sheetSelect.disabled = false;
+                    
+                    // Enable the preview columns button
+                    const previewColumnsBtn = document.getElementById('previewColumnsBtn');
+                    if (previewColumnsBtn) {
+                        previewColumnsBtn.disabled = false;
+                    }
+                }
+
+                // Auto-select first sheet if only one exists
+                if (data.sheets.length === 1 && !data.sheets[0].error) {
+                    sheetSelect.value = data.sheets[0].name;
+                    selectedSheet = data.sheets[0].name;
+                    // Automatically preview columns for single sheet
+                    previewMarketingExcelColumns();
+                }
+
+                alert(`✅ Arquivo processado! Encontradas ${data.sheets.length} planilha(s).`);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('❌ Erro ao processar arquivo Excel.');
+            });
+    }
+
+    // Handle sheet selection change
+    document.addEventListener('DOMContentLoaded', function() {
+        const sheetSelect = document.getElementById('marketingSheetSelect');
+        if (sheetSelect) {
+            sheetSelect.addEventListener('change', function() {
+                selectedSheet = this.value;
+                
+                // Reset column selection when sheet changes
+                const columnSelect = document.getElementById('marketingEmailColumnSelect');
+                if (columnSelect) {
+                    columnSelect.innerHTML = '<option value="">Selecione uma coluna...</option>';
+                    columnSelect.disabled = true;
+                }
+                
+                // Reset upload button
+                const uploadBtn = document.getElementById('uploadMarketingBtn');
+                if (uploadBtn) {
+                    uploadBtn.disabled = true;
+                }
+                
+                // Hide preview
+                const previewDiv = document.getElementById('marketingColumnPreview');
+                if (previewDiv) {
+                    previewDiv.style.display = 'none';
+                }
+                
+                if (selectedSheet) {
+                    // Auto-preview columns when sheet is selected
+                    previewMarketingExcelColumns();
+                }
+            });
+        }
+    });
+
     // Preview marketing Excel columns
     function previewMarketingExcelColumns() {
         const fileInput = document.getElementById('marketingExcelFile');
@@ -740,8 +966,18 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
             return;
         }
 
+        // Check if a sheet is selected
+        const sheetSelect = document.getElementById('marketingSheetSelect');
+        const selectedSheetName = sheetSelect ? sheetSelect.value : null;
+        
+        if (!selectedSheetName) {
+            alert('❌ Por favor, selecione uma planilha primeiro.');
+            return;
+        }
+
         const formData = new FormData();
         formData.append('excel_file', file);
+        formData.append('sheet_name', selectedSheetName);
 
         fetch('{{ url_for("preview_excel_columns") }}', {
             method: 'POST',
@@ -785,12 +1021,6 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
             .catch(error => {
                 console.error('Error:', error);
                 alert('❌ Erro ao processar arquivo Excel.');
-            })
-            .finally(() => {
-                // Restore button state
-                uploadBtn.innerHTML = originalText;
-                uploadBtn.disabled = false;
-                uploadProgress.style.display = 'none';
             });
     }
 
@@ -816,16 +1046,23 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
     function uploadMarketingExcelEmails() {
         const fileInput = document.getElementById('marketingExcelFile');
         const columnSelect = document.getElementById('marketingEmailColumnSelect');
+        const sheetSelect = document.getElementById('marketingSheetSelect');
         const listNameInput = document.getElementById('listName');
         const replaceExistingCheckbox = document.getElementById('replaceExistingList');
 
         const file = fileInput.files[0];
         const selectedColumn = columnSelect.value;
+        const selectedSheet = sheetSelect.value;
         const listName = listNameInput.value.trim();
         const replaceExisting = replaceExistingCheckbox.checked;
 
         if (!file) {
             alert('❌ Por favor, selecione um arquivo Excel primeiro.');
+            return;
+        }
+
+        if (!selectedSheet) {
+            alert('❌ Por favor, selecione uma planilha primeiro.');
             return;
         }
 
@@ -851,6 +1088,7 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
 
         const formData = new FormData();
         formData.append('excel_file', file);
+        formData.append('sheet_name', selectedSheet);
         formData.append('email_column', selectedColumn);
         formData.append('list_name', listName);
         formData.append('replace_existing', replaceExisting ? 'true' : 'false');
@@ -879,6 +1117,7 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
             })
             .then(data => {
                 if (data.error) {
+                    console.error('Upload error:', data);
                     alert(`❌ Erro: ${data.error}`);
                     return;
                 }
@@ -891,6 +1130,9 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
                     message += `• ${data.details.duplicates_skipped} duplicados ignorados\n`;
                     message += `• ${data.details.errors} erros\n`;
                     message += `• Total processado: ${data.details.total_processed}`;
+                    if (data.details.invalid_emails_found > 0) {
+                        message += `\n• ${data.details.invalid_emails_found} emails inválidos encontrados no arquivo`;
+                    }
                 }
                 
                 alert(message);
@@ -1052,6 +1294,294 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
 
         container.innerHTML = html;
     }
+
+    // Email Search Functionality
+    let searchMatches = [];
+    let currentMatchIndex = -1;
+    let lastSearchTerm = '';
+
+    function searchEmailInTextarea() {
+        const searchBox = document.getElementById('emailSearchBox');
+        const textarea = document.getElementById('bulkEmails');
+        const searchResults = document.getElementById('searchResults');
+        const searchResultText = document.getElementById('searchResultText');
+        
+        const searchTerm = searchBox.value.trim().toLowerCase();
+        
+        // Clear previous search if search term is empty
+        if (!searchTerm) {
+            searchResults.style.display = 'none';
+            searchBox.className = searchBox.className.replace(/\b(has-results|no-results)\b/g, '');
+            searchMatches = [];
+            currentMatchIndex = -1;
+            lastSearchTerm = '';
+            return;
+        }
+        
+        // Always search when term changes
+        lastSearchTerm = searchTerm;
+        currentMatchIndex = -1;
+        searchMatches = [];
+        
+        const lines = textarea.value.split('\n');
+        
+        // Find all matches
+        lines.forEach((line, lineIndex) => {
+            const trimmedLine = line.trim();
+            const lowerLine = line.toLowerCase();
+            
+            if (trimmedLine && lowerLine.includes(searchTerm)) {
+                // Calculate character position in textarea
+                let charPosition = 0;
+                for (let i = 0; i < lineIndex; i++) {
+                    charPosition += lines[i].length + 1; // +1 for newline character
+                }
+                
+                const matchStartInLine = lowerLine.indexOf(searchTerm);
+                if (matchStartInLine !== -1) {
+                    const match = {
+                        lineIndex: lineIndex,
+                        charStart: charPosition,
+                        charEnd: charPosition + line.length,
+                        line: trimmedLine,
+                        matchStart: charPosition + matchStartInLine,
+                        matchEnd: charPosition + matchStartInLine + searchTerm.length,
+                        originalLine: line // Keep original line with spaces
+                    };
+                    
+                    searchMatches.push(match);
+                }
+            }
+        });
+        
+
+        
+        // Update search results display
+        if (searchMatches.length > 0) {
+            currentMatchIndex = 0;
+            searchResults.style.display = 'block';
+            searchBox.className = searchBox.className.replace(/\b(has-results|no-results)\b/g, '') + ' has-results';
+            updateSearchResultsDisplay();
+            highlightMatch(currentMatchIndex);
+        } else {
+            searchResults.style.display = 'block';
+            searchBox.className = searchBox.className.replace(/\b(has-results|no-results)\b/g, '') + ' no-results';
+            searchResultText.textContent = `Nenhum resultado encontrado para "${searchBox.value}"`;
+        }
+    }
+
+    function updateSearchResultsDisplay() {
+        const searchResultText = document.getElementById('searchResultText');
+        const searchBox = document.getElementById('emailSearchBox');
+        
+        if (searchMatches.length > 0) {
+            const currentMatch = searchMatches[currentMatchIndex];
+            const matchPreview = currentMatch.line.length > 30 ? 
+                currentMatch.line.substring(0, 30) + '...' : 
+                currentMatch.line;
+            
+            searchResultText.innerHTML = `
+                <strong>${currentMatchIndex + 1} de ${searchMatches.length}</strong> resultados para "<em>${searchBox.value}</em>"
+                <br><small class="text-muted">Linha ${currentMatch.lineIndex + 1}: ${matchPreview}</small>
+            `;
+        }
+    }
+
+    function highlightMatch(matchIndex) {
+        if (matchIndex < 0 || matchIndex >= searchMatches.length) return;
+        
+        const textarea = document.getElementById('bulkEmails');
+        const match = searchMatches[matchIndex];
+        
+
+        
+        // Focus textarea briefly to ensure selection works
+        const wasSearchBoxFocused = document.activeElement === document.getElementById('emailSearchBox');
+        textarea.focus();
+        
+        // Set selection to highlight the entire line containing the match
+        textarea.setSelectionRange(match.charStart, match.charEnd);
+        
+        // Calculate scroll position more accurately
+        const textBeforeMatch = textarea.value.substring(0, match.charStart);
+        const linesBefore = textBeforeMatch.split('\n').length - 1;
+        
+        // Get textarea properties for better scroll calculation
+        const style = window.getComputedStyle(textarea);
+        const lineHeight = parseInt(style.lineHeight) || 20;
+        const paddingTop = parseInt(style.paddingTop) || 0;
+        
+        // Scroll to show the match with some context
+        const targetScrollTop = Math.max(0, (linesBefore - 1) * lineHeight - paddingTop);
+        textarea.scrollTop = targetScrollTop;
+        
+        // Return focus to search box if it was focused before
+        if (wasSearchBoxFocused) {
+            setTimeout(() => {
+                document.getElementById('emailSearchBox').focus();
+            }, 100);
+        }
+        
+
+    }
+
+    function navigateSearchResults(direction) {
+        if (searchMatches.length === 0) return;
+        
+        if (direction === 'next') {
+            currentMatchIndex = (currentMatchIndex + 1) % searchMatches.length;
+        } else if (direction === 'prev') {
+            currentMatchIndex = currentMatchIndex <= 0 ? searchMatches.length - 1 : currentMatchIndex - 1;
+        }
+        
+        updateSearchResultsDisplay();
+        highlightMatch(currentMatchIndex);
+    }
+
+    function handleSearchNavigation(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            if (event.shiftKey) {
+                navigateSearchResults('prev');
+            } else {
+                navigateSearchResults('next');
+            }
+        } else if (event.key === 'Escape') {
+            clearEmailSearch();
+        }
+    }
+
+    function clearEmailSearch() {
+        const searchBox = document.getElementById('emailSearchBox');
+        const searchResults = document.getElementById('searchResults');
+        const textarea = document.getElementById('bulkEmails');
+        
+        searchBox.value = '';
+        searchBox.className = searchBox.className.replace(/\b(has-results|no-results)\b/g, '');
+        searchResults.style.display = 'none';
+        searchMatches = [];
+        currentMatchIndex = -1;
+        lastSearchTerm = '';
+        
+        // Clear selection in textarea
+        if (textarea.selectionStart !== textarea.selectionEnd) {
+            textarea.setSelectionRange(textarea.selectionEnd, textarea.selectionEnd);
+        }
+    }
+
+    // Add global keyboard event listener to handle typing when textarea is focused
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchBox = document.getElementById('emailSearchBox');
+        const textarea = document.getElementById('bulkEmails');
+        
+        // Prevent textarea from stealing focus during search
+        textarea.addEventListener('focus', function(e) {
+            // If search box has content and user didn't explicitly click on textarea
+            if (searchBox.value.trim() && searchMatches.length > 0) {
+                // Check if this focus event was triggered by our search highlighting
+                if (document.activeElement === textarea && !e.isTrusted) {
+                    return; // Allow programmatic focus for highlighting
+                }
+            }
+        });
+        
+        // Global keydown listener for quick search access
+        document.addEventListener('keydown', function(e) {
+            // If user presses Ctrl+F or Cmd+F, focus the search box instead of browser search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                searchBox.focus();
+            }
+        });
+        
+        // Improve search box behavior
+        searchBox.addEventListener('focus', function() {
+            // Only select all text if user clicked on the search box, not if auto-focused
+            // This prevents the text selection issue when typing
+        });
+    });
+
+    // Test function to add sample emails for testing search
+    function addTestEmails() {
+        const textarea = document.getElementById('bulkEmails');
+        const testEmails = `joao.silva@gmail.com
+maria.santos@hotmail.com
+pedro.oliveira@yahoo.com
+ana.costa@outlook.com
+carlos.ferreira@gmail.com
+lucia.pereira@company.com
+rafael.almeida@test.com
+fernanda.rodrigues@example.org
+gustavo.lima@domain.net
+patricia.souza@email.com
+ricardo.barbosa@gmail.com
+camila.martins@hotmail.com
+bruno.carvalho@yahoo.com
+juliana.nascimento@outlook.com
+diego.ribeiro@company.com`;
+        
+        if (textarea.value.trim()) {
+            if (confirm('Isso irá substituir os emails existentes. Continuar?')) {
+                textarea.value = testEmails;
+            }
+        } else {
+            textarea.value = testEmails;
+        }
+        
+        // Clear any existing search
+        clearEmailSearch();
+        
+        alert('✅ Emails de teste adicionados! Agora você pode testar a funcionalidade de pesquisa.');
+    }
+
+    // Debug function to test upload parameters
+    function debugUploadParams() {
+        const fileInput = document.getElementById('marketingExcelFile');
+        const columnSelect = document.getElementById('marketingEmailColumnSelect');
+        const sheetSelect = document.getElementById('marketingSheetSelect');
+        const listNameInput = document.getElementById('listName');
+        const replaceExistingCheckbox = document.getElementById('replaceExistingList');
+
+        const file = fileInput.files[0];
+        const selectedColumn = columnSelect.value;
+        const selectedSheet = sheetSelect.value;
+        const listName = listNameInput.value.trim();
+        const replaceExisting = replaceExistingCheckbox.checked;
+
+        if (!file) {
+            alert('❌ Por favor, selecione um arquivo Excel primeiro para testar.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('excel_file', file);
+        formData.append('sheet_name', selectedSheet);
+        formData.append('email_column', selectedColumn);
+        formData.append('list_name', listName);
+        formData.append('replace_existing', replaceExisting ? 'true' : 'false');
+
+        fetch('/debug-upload-params', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Debug response:', data);
+            
+            let message = '🔍 Debug Upload Parameters:\n\n';
+            message += `Files: ${JSON.stringify(data.files)}\n`;
+            message += `Form Data: ${JSON.stringify(data.form_data, null, 2)}\n`;
+            message += `File Details: ${JSON.stringify(data.file_details, null, 2)}`;
+            
+            alert(message);
+        })
+        .catch(error => {
+            console.error('Debug error:', error);
+            alert(`❌ Debug error: ${error.message}`);
+        });
+    }
+
+
 
 
 </script>
