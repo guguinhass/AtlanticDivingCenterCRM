@@ -8,7 +8,6 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templates/admin_users.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/admin_users.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/marketing_emails.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/marketing_emails.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -183,7 +182,7 @@
       <workItem from="1754899257197" duration="15586000" />
       <workItem from="1754993400454" duration="7821000" />
       <workItem from="1755080123351" duration="4389000" />
-      <workItem from="1755158664119" duration="1514000" />
+      <workItem from="1755158664119" duration="3854000" />
     </task>
     <servers />
   </component>

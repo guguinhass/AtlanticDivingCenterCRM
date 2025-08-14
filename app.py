@@ -861,6 +861,7 @@ def manage_users():
 
     # Handle user creation
     if request.method == 'POST' and 'create_user' in request.form:
+        logger.info(f"Creating user: {request.form}")
         username = request.form['username']
         password = request.form['password']
         is_admin = bool(int(request.form.get('is_admin', 0)))
@@ -877,6 +878,7 @@ def manage_users():
 
     # Handle user editing
     elif request.method == 'POST' and 'edit_user' in request.form:
+        logger.info(f"Editing user: {request.form}")
         user_id = request.form['user_id']
         username = request.form['username']
         password = request.form['password']

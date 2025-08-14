@@ -169,7 +169,13 @@
     document.getElementById('editUserForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
-        const formData = new FormData(this);
+        // Create a clean FormData with only the edit fields
+        const formData = new FormData();
+        formData.append('edit_user', '1');
+        formData.append('user_id', document.getElementById('editUserId').value);
+        formData.append('username', document.getElementById('editUsername').value);
+        formData.append('password', document.getElementById('editPassword').value);
+        formData.append('is_admin', document.getElementById('editIsAdmin').value);
         
         fetch('{{ url_for("manage_users") }}', {
             method: 'POST',
