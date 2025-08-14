@@ -21,6 +21,8 @@
         para voltar às templates originais.
     </div>
 
+
+
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -333,6 +335,8 @@
             ]
         }
     });
+
+
 
     // Load existing content
     document.addEventListener('DOMContentLoaded', function () {

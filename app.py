@@ -39,6 +39,19 @@ supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 # --------Initialize Flask App-------
 app = Flask(__name__)
 
+# Increase maximum request size to handle large email templates
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB limit
+
+
+
+
+
+
+
+
+
+
+
 # ------------Login Credentials-------------
 app.secret_key = os.getenv('APP_SECRET_KEY')
 
@@ -54,6 +67,7 @@ else:
     ENABLE_SCHEDULER = ENABLE_SCHEDULER_ENV.strip().lower() in ("1", "true", "yes", "y")
 
 scheduler = None
+
 
 def _try_start_scheduler_with_lock() -> bool:
     """Try to start the scheduler acquiring a per-host lock to avoid multi-worker duplicates.
@@ -96,6 +110,7 @@ def _try_start_scheduler_with_lock() -> bool:
     except Exception as e:
         logger.error(f"Failed to start scheduler: {e}")
         return False
+
 
 if ENABLE_SCHEDULER:
     # In debug with reloader, only start in the reloaded child process
@@ -153,7 +168,7 @@ def get_email_template_content(nacionalidade, template_type='primeiro'):
         }
 
         template_file = template_files.get(nacionalidade, 'email_feedback.html')
-        
+
         with app.app_context():
             file_content = render_template(template_file, nome="[NOME]")
 
@@ -268,6 +283,7 @@ def check_and_send_emails():
     except Exception as e:
         logger.error(f"Critical error in check_and_send_emails: {str(e)}")
 
+
 # ------Email Sending Scheduler-------
 # Only add scheduler job if scheduler exists and not in debug mode
 if scheduler is not None:
@@ -312,8 +328,6 @@ else:
     logger.info("Skipping email scheduler - scheduler not available")
 
 
-
-
 @app.route('/clear-email-templates', methods=['POST'])
 @login_required
 def clear_email_templates():
@@ -331,6 +345,7 @@ def clear_email_templates():
         logger.error(f"Error clearing email templates: {str(e)}")
 
     return redirect(url_for('index'))
+
 
 # ------------Flask Routes-----------
 @app.route('/', methods=['GET', 'POST'])
@@ -574,6 +589,7 @@ def remover_cliente(email):
     except Exception as e:
         return str(e), 500
 
+
 # ---------Update Gastos---------
 @app.route('/update-gastos', methods=['POST'])
 @login_required
@@ -614,6 +630,7 @@ def update_gastos():
         logger.error(f"Erro ao atualizar gastos e receita: {str(e)}")
         return {'success': False, 'error': str(e)}
 
+
 # -------Send Email to All-----------
 @app.route('/enviar-todos', methods=['POST'])
 def enviar_manual_todos():
@@ -643,6 +660,7 @@ def enviar_manual_todos():
         logger.error(f'Erro ao enviar emails: {str(e)}')
         return redirect(url_for('index'))
 
+
 # --------Debug----------
 @app.route('/debug/<email>')
 def debug_cliente(email):
@@ -661,6 +679,7 @@ def debug_cliente(email):
         'data_mergulho': str(data_mergulho),
         'dias_passados': (datetime.now().date() - data_mergulho).days
     }
+
 
 # --------Table Refreshing------------
 @app.route('/atualizar-tabela')
@@ -711,7 +730,7 @@ def exportar_emails():
 
             for row in worksheet.iter_rows(min_row=2, min_col=11, max_col=15):
                 for cell in row:
-                     cell.number_format = '#,##0.00" €"'
+                    cell.number_format = '#,##0.00" €"'
             for column in worksheet.columns:
                 max_length = 0
                 column_letter = column[0].column_letter
@@ -741,7 +760,8 @@ def exportar_emails():
         logger.error(f"Erro ao exportar emails: {str(e)}")
         return redirect(url_for('index'))
 
-#--------------Get emails from excel files--------------
+
+# --------------Get emails from excel files--------------
 @app.route('/upload-excel-emails', methods=['POST'])
 @login_required
 def upload_excel_emails():
@@ -805,7 +825,8 @@ def upload_excel_emails():
         logger.error(f"Error processing Excel file: {str(e)}")
         return redirect(url_for('marketing_emails'))
 
-#---------View collumns from excel files---------
+
+# ---------View collumns from excel files---------
 @app.route('/preview-excel-columns', methods=['POST'])
 @login_required
 def preview_excel_columns():
@@ -852,7 +873,8 @@ def preview_excel_columns():
         logger.error(f"Error previewing Excel file: {str(e)}")
         return {'error': f'Erro ao processar arquivo: {str(e)}'}, 500
 
-#---------Admin managing users-----------
+
+# ---------Admin managing users-----------
 @app.route('/admin/users', methods=['GET', 'POST'])
 @login_required
 def manage_users():
@@ -883,28 +905,28 @@ def manage_users():
         username = request.form['username']
         password = request.form['password']
         is_admin = bool(int(request.form.get('is_admin', 0)))
-        
+
         try:
             # Get current user data
             current_user = supabase.table("usuarios").select("*").eq("id", user_id).execute()
             if not current_user.data:
                 flash("Utilizador não encontrado!", 'error')
                 return redirect(url_for('manage_users'))
-            
+
             # Prepare update data
             update_data = {
                 "username": username,
                 "is_admin": is_admin
             }
-            
+
             # Only update password if a new one is provided
             if password.strip():
                 update_data["password_hash"] = password
-            
+
             # Update the user
             supabase.table("usuarios").update(update_data).eq("id", user_id).execute()
             flash("Utilizador atualizado com sucesso!", 'success')
-            
+
         except Exception as e:
             flash(f"Erro ao atualizar usuário: {e}", 'error')
 
@@ -942,6 +964,7 @@ def login():
             flash('Usuário ou senha inválidos', 'danger')
     return render_template('login.html')
 
+
 # -------Iva setter--------
 @app.route('/set-iva', methods=['POST'])
 @login_required
@@ -949,6 +972,7 @@ def set_iva():
     new_iva = request.json.get('iva')
     supabase.table("configuracoes").upsert({"chave": "iva", "valor": str(new_iva)}).execute()
     return {'success': True}
+
 
 # --------Edit Email Templates---------
 @app.route('/editar-primeiro-email', methods=['GET', 'POST'])
@@ -963,7 +987,8 @@ def editar_primeiro_email():
         logger.info("Getting template content for primeiro email")
         # Get template content using the same logic as get_email_template_content
         template_content = {}
-        nacionalidades = ['português', 'inglês', 'francês', 'alemão', 'dinamarques', 'espanhol', 'noruegues', 'polaco', 'sueco', 'outro']
+        nacionalidades = ['português', 'inglês', 'francês', 'alemão', 'dinamarques', 'espanhol', 'noruegues', 'polaco',
+                          'sueco', 'outro']
         import re  # Move import to top of function
 
         for nacionalidade in nacionalidades:
@@ -1000,10 +1025,21 @@ def editar_primeiro_email():
                 template_content[
                     nacionalidade] = f"<p>Olá [NOME],</p><p>Obrigado pela sua experiência de mergulho!</p><p>Atenciosamente,<br>Atlantic Diving Center</p>"
 
-        # Store in session for the edit page
+        # Store only the template type in session (not the large content)
         session['editing_template'] = 'primeiro'
-        session['template_content'] = template_content
 
+        # Store template content in a temporary file instead of session
+        import tempfile
+        import json
+
+        temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8')
+        json.dump(template_content, temp_file)
+        temp_file.close()
+
+        # Store the file path in session (much smaller)
+        session['template_file_path'] = temp_file.name
+
+        logger.info(f"Template content stored in temporary file: {temp_file.name}")
         logger.info("Redirecting to edit_email_template")
         return redirect(url_for('edit_email_template'))
 
@@ -1011,6 +1047,7 @@ def editar_primeiro_email():
         logger.error(f"Erro ao editar primeiro email: {str(e)}")
         flash('Erro ao abrir editor de email', 'danger')
         return redirect(url_for('index'))
+
 
 # -----------Edit Second Email------------
 @app.route('/editar-segundo-email', methods=['GET', 'POST'])
@@ -1025,7 +1062,8 @@ def editar_segundo_email():
         logger.info("Getting template content for segundo email")
         # Get template content using the same logic as get_email_template_content
         template_content = {}
-        nacionalidades = ['português', 'inglês', 'francês', 'alemão', 'dinamarques', 'espanhol', 'noruegues', 'polaco', 'sueco', 'outro']
+        nacionalidades = ['português', 'inglês', 'francês', 'alemão', 'dinamarques', 'espanhol', 'noruegues', 'polaco',
+                          'sueco', 'outro']
         import re  # Move import to top of function
 
         for nacionalidade in nacionalidades:
@@ -1062,10 +1100,21 @@ def editar_segundo_email():
                 template_content[
                     nacionalidade] = f"<p>Olá [NOME],</p><p>Obrigado pela sua experiência de mergulho!</p><p>Atenciosamente,<br>Atlantic Diving Center</p>"
 
-        # Store in session for the edit page
+        # Store only the template type in session (not the large content)
         session['editing_template'] = 'segundo'
-        session['template_content'] = template_content
 
+        # Store template content in a temporary file instead of session
+        import tempfile
+        import json
+
+        temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8')
+        json.dump(template_content, temp_file)
+        temp_file.close()
+
+        # Store the file path in session (much smaller)
+        session['template_file_path'] = temp_file.name
+
+        logger.info(f"Template content stored in temporary file: {temp_file.name}")
         logger.info("Redirecting to edit_email_template")
         return redirect(url_for('edit_email_template'))
 
@@ -1074,7 +1123,8 @@ def editar_segundo_email():
         flash('Erro ao abrir editor de email', 'danger')
         return redirect(url_for('index'))
 
-#-------------Edit templates---------------
+
+# -------------Edit templates---------------
 @app.route('/edit-email-template', methods=['GET', 'POST'])
 @login_required
 def edit_email_template():
@@ -1158,13 +1208,70 @@ def edit_email_template():
             logger.error(f"Erro ao salvar templates: {str(e)}")
             flash('Erro ao salvar templates', 'danger')
 
-    # Get the template content from session or database
+    # Get the template content from temporary file or database
     editing_template = session.get('editing_template', 'primeiro')
     template_content = {}
 
-    # Always load templates from files
-    nacionalidades = ['português', 'inglês', 'francês', 'alemão','dinamarques', 'espanhol', 'noruegues', 'polaco','sueco', 'outro']
-    import re  # Move import to top of function
+    # Try to load from temporary file first (if it exists)
+    template_file_path = session.get('template_file_path')
+    if template_file_path and os.path.exists(template_file_path):
+        try:
+            import json
+            with open(template_file_path, 'r', encoding='utf-8') as f:
+                template_content = json.load(f)
+            logger.info(f"Loaded template content from temporary file: {template_file_path}")
+
+            # Clean up the temporary file after loading
+            try:
+                os.unlink(template_file_path)
+                session.pop('template_file_path', None)
+                logger.info("Temporary template file cleaned up")
+            except Exception as cleanup_error:
+                logger.warning(f"Could not clean up temporary file: {cleanup_error}")
+
+        except Exception as file_error:
+            logger.error(f"Error loading from temporary file: {file_error}")
+            # Fall back to loading from files
+            template_content = load_templates_from_files(editing_template)
+    else:
+        # Fall back to loading from files
+        template_content = load_templates_from_files(editing_template)
+
+    # Check for custom templates in database and override file content
+    template_content = check_database_templates(template_content, editing_template)
+
+    # All templates are loaded from files, so they're all "default"
+    template_status = {
+        'português': 'default',
+        'inglês': 'default',
+        'francês': 'default',
+        'alemão': 'default',
+        'dinamarques': 'default',
+        'espanhol': 'default',
+        'noruegues': 'default',
+        'polaco': 'default',
+        'sueco': 'default',
+        'outro': 'default',
+    }
+
+    # Debug: Print template content lengths
+    for nacionalidade, content in template_content.items():
+        logger.info(f"Template {nacionalidade}: {len(content)} chars")
+        logger.info(f"First 100 chars: {content[:100]}...")
+        logger.info(f"Last 100 chars: {content[-100:] if len(content) > 100 else content}")
+
+    return render_template('edit_email_template.html',
+                           template_content=template_content,
+                           editing_template=editing_template,
+                           template_status=template_status)
+
+
+def load_templates_from_files(editing_template):
+    """Load templates from HTML files"""
+    template_content = {}
+    nacionalidades = ['português', 'inglês', 'francês', 'alemão', 'dinamarques', 'espanhol', 'noruegues', 'polaco',
+                      'sueco', 'outro']
+    import re
 
     for nacionalidade in nacionalidades:
         try:
@@ -1198,47 +1305,33 @@ def edit_email_template():
                         f"Using full template for {nacionalidade}: {len(template_content[nacionalidade])} chars")
             logger.info(f"Loaded template from file for {nacionalidade} ({editing_template})")
 
-            # Check for custom template in database
-            try:
-                response = supabase.table("email_templates").select("*").eq("nacionalidade", nacionalidade).eq("tipo",
-                                                                                                               editing_template).execute()
-                if response.data and response.data[0]['conteudo'].strip():
-                    template_content[nacionalidade] = response.data[0]['conteudo']
-                    logger.info(f"Loaded custom template from database for {nacionalidade}")
-            except Exception as db_error:
-                logger.error(f"Error loading custom template for {nacionalidade}: {str(db_error)}")
-
         except Exception as e:
             logger.error(f"Error getting template for {nacionalidade}: {str(e)}")
             template_content[
                 nacionalidade] = f"<p>Olá [NOME],</p><p>Obrigado pela sua experiência de mergulho!</p><p>Atenciosamente,<br>Atlantic Diving Center</p>"
 
-    # All templates are loaded from files, so they're all "default"
-    template_status = {
-        'português': 'default',
-        'inglês': 'default',
-        'francês': 'default',
-        'alemão': 'default',
-        'dinamarques': 'default',
-        'espanhol': 'default',
-        'noruegues': 'default',
-        'polaco': 'default',
-        'sueco': 'default',
-        'outro': 'default',
-    }
+    return template_content
 
-    # Debug: Print template content lengths
-    for nacionalidade, content in template_content.items():
-        logger.info(f"Template {nacionalidade}: {len(content)} chars")
-        logger.info(f"First 100 chars: {content[:100]}...")
-        logger.info(f"Last 100 chars: {content[-100:] if len(content) > 100 else content}")
 
-    return render_template('edit_email_template.html',
-                           template_content=template_content,
-                           editing_template=editing_template,
-                           template_status=template_status)
+def check_database_templates(template_content, editing_template):
+    """Check for custom templates in database and override file content"""
+    nacionalidades = ['português', 'inglês', 'francês', 'alemão', 'dinamarques', 'espanhol', 'noruegues', 'polaco',
+                      'sueco', 'outro']
 
-#--------------Marketing emails functions---------------
+    for nacionalidade in nacionalidades:
+        try:
+            response = supabase.table("email_templates").select("*").eq("nacionalidade", nacionalidade).eq("tipo",
+                                                                                                           editing_template).execute()
+            if response.data and response.data[0]['conteudo'].strip():
+                template_content[nacionalidade] = response.data[0]['conteudo']
+                logger.info(f"Loaded custom template from database for {nacionalidade}")
+        except Exception as db_error:
+            logger.error(f"Error loading custom template for {nacionalidade}: {str(db_error)}")
+
+    return template_content
+
+
+# --------------Marketing emails functions---------------
 @app.route('/marketing-emails', methods=['GET', 'POST'])
 @login_required
 def marketing_emails():
@@ -1376,7 +1469,8 @@ def marketing_emails():
 
     return render_template('marketing_emails.html', client_count=client_count, email_lists=email_lists)
 
-#---------------Remove marketing emails-----------------
+
+# ---------------Remove marketing emails-----------------
 @app.route('/clear-marketing-emails', methods=['POST'])
 @login_required
 def clear_marketing_emails():
@@ -1398,7 +1492,8 @@ def clear_marketing_emails():
 
     return redirect(url_for('marketing_emails'))
 
-#--------------Get email lists----------------
+
+# --------------Get email lists----------------
 @app.route('/get-marketing-email-lists', methods=['GET'])
 @login_required
 def get_marketing_email_lists():
@@ -1432,7 +1527,8 @@ def get_marketing_email_lists():
         logger.error(f"Error getting marketing email lists: {str(e)}")
         return {'error': f'Erro ao carregar listas: {str(e)}'}, 500
 
-#--------------Delete emails from marketing lists--------------
+
+# --------------Delete emails from marketing lists--------------
 @app.route('/delete-marketing-email-list', methods=['POST'])
 @login_required
 def delete_marketing_email_list():
@@ -1455,7 +1551,8 @@ def delete_marketing_email_list():
         logger.error(f"Error deleting marketing email list: {str(e)}")
         return {'error': f'Erro ao remover lista: {str(e)}'}, 500
 
-#-------------Editing marketing email lists----------------
+
+# -------------Editing marketing email lists----------------
 @app.route('/marketing-email-editor', methods=['GET'])
 @login_required
 def marketing_email_editor():
@@ -1490,7 +1587,8 @@ def marketing_email_editor():
 
     return render_template('marketing_email_editor.html', email_lists=email_lists)
 
-#---------Storing email lists----------
+
+# ---------Storing email lists----------
 @app.route('/api/marketing-lists', methods=['GET'])
 @login_required
 def get_marketing_lists_api():
@@ -1670,7 +1768,8 @@ def delete_marketing_list_api(list_name):
         logger.error(f"Error deleting marketing list API: {str(e)}")
         return {'error': f'Erro ao remover lista: {str(e)}'}, 500
 
-#-------------Upload emails from excel-------------
+
+# -------------Upload emails from excel-------------
 @app.route('/upload-marketing-emails-excel', methods=['POST'])
 @login_required
 def upload_marketing_emails_excel():
@@ -1716,7 +1815,8 @@ def upload_marketing_emails_excel():
         else:
             # Check for existing emails to avoid duplicates
             try:
-                existing_emails = supabase.table('marketing_email_lists').select('email').eq('list_name', list_name).execute()
+                existing_emails = supabase.table('marketing_email_lists').select('email').eq('list_name',
+                                                                                             list_name).execute()
                 existing_email_set = {record['email'] for record in existing_emails.data if record['email']}
                 # Filter out emails that already exist
                 valid_emails = [email for email in valid_emails if email not in existing_email_set]
@@ -1774,6 +1874,7 @@ def upload_marketing_emails_excel():
         logger.error(f"Error uploading marketing emails: {e}")
         return jsonify({'error': f'Erro ao processar arquivo: {str(e)}'}), 500
 
+
 @app.route('/marcar-email-manual/<email>', methods=['POST'])
 def marcar_email_manual(email):
     resultado = supabase.table("clientes").select("*").eq("email", email).execute()
@@ -1794,7 +1895,7 @@ def marcar_email_manual(email):
     return redirect(url_for("index"))
 
 
-#-------Starter--------
+# -------Starter--------
 if __name__ == '__main__':
     app.run()
 
