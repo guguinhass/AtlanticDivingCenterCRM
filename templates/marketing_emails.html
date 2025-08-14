@@ -369,6 +369,51 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
         placeholder: 'Escreva o conteúdo do seu email marketing aqui...'
     });
 
+    // Attachment handling state and helpers
+    let emailAttachments = [];
+
+    function attachImage() {
+        const input = document.getElementById('imageInput');
+        if (input) input.click();
+    }
+
+    function handleImageUpload(input) {
+        const file = input && input.files ? input.files[0] : null;
+        if (!file) return;
+
+        emailAttachments.push({ file });
+        updateAttachmentUI();
+        // reset input so the same file can be selected again if needed
+        input.value = '';
+    }
+
+    function removeAttachment(index) {
+        if (index >= 0 && index < emailAttachments.length) {
+            emailAttachments.splice(index, 1);
+            updateAttachmentUI();
+        }
+    }
+
+    function updateAttachmentUI() {
+        const listContainer = document.getElementById('attachmentItems');
+        const wrapper = document.getElementById('attachmentList');
+        if (!listContainer || !wrapper) return;
+
+        listContainer.innerHTML = '';
+        emailAttachments.forEach((att, idx) => {
+            const row = document.createElement('div');
+            row.className = 'd-flex justify-content-between align-items-center py-1';
+            const sizeKb = Math.max(1, Math.round((att.file.size || 0) / 1024));
+            row.innerHTML = `
+                <span class="small">${att.file.name} (${sizeKb} KB)</span>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAttachment(${idx})">Remover</button>
+            `;
+            listContainer.appendChild(row);
+        });
+
+        wrapper.style.display = emailAttachments.length > 0 ? 'block' : 'none';
+    }
+
     // Email validation function
     function isValidEmail(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
