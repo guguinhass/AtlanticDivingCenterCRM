@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, url_for, render_template, send_file, session, flash
+from flask import Flask, request, redirect, url_for, render_template, send_file, session, flash, jsonify
 from datetime import datetime, timedelta
 import smtplib
 from email.mime.text import MIMEText
@@ -859,8 +859,6 @@ def manage_users():
     if not session.get('is_admin'):
         return redirect(url_for('index'))
 
-    mensagem = None
-
     # Handle user creation
     if request.method == 'POST' and 'create_user' in request.form:
         username = request.form['username']
@@ -873,21 +871,52 @@ def manage_users():
                 "password_hash": password_hash,
                 "is_admin": is_admin
             }).execute()
-            mensagem = "Usuário criado com sucesso!"
+            flash("Usuário criado com sucesso!", 'success')
         except Exception as e:
-            mensagem = f"Erro ao criar usuário: {e}"
+            flash(f"Erro ao criar usuário: {e}", 'error')
+
+    # Handle user editing
+    elif request.method == 'POST' and 'edit_user' in request.form:
+        user_id = request.form['user_id']
+        username = request.form['username']
+        password = request.form['password']
+        is_admin = bool(int(request.form.get('is_admin', 0)))
+        
+        try:
+            # Get current user data
+            current_user = supabase.table("usuarios").select("*").eq("id", user_id).execute()
+            if not current_user.data:
+                flash("Utilizador não encontrado!", 'error')
+                return redirect(url_for('manage_users'))
+            
+            # Prepare update data
+            update_data = {
+                "username": username,
+                "is_admin": is_admin
+            }
+            
+            # Only update password if a new one is provided
+            if password.strip():
+                update_data["password_hash"] = password
+            
+            # Update the user
+            supabase.table("usuarios").update(update_data).eq("id", user_id).execute()
+            flash("Utilizador atualizado com sucesso!", 'success')
+            
+        except Exception as e:
+            flash(f"Erro ao atualizar usuário: {e}", 'error')
 
     # Handle user deletion
-    if request.method == 'POST' and 'delete_user' in request.form:
+    elif request.method == 'POST' and 'delete_user' in request.form:
         user_id = int(request.form['delete_user'])
         try:
             supabase.table("usuarios").delete().eq("id", user_id).execute()
-            mensagem = "Usuário removido com sucesso!"
+            flash("Usuário removido com sucesso!", 'success')
         except Exception as e:
-            mensagem = f"Erro ao remover usuário: {e}"
+            flash(f"Erro ao remover usuário: {e}", 'error')
 
     users = supabase.table("usuarios").select("*").execute().data
-    return render_template("admin_users.html", users=users, mensagem=mensagem)
+    return render_template("admin_users.html", users=users)
 
 
 # ----------Login-------------
@@ -1600,107 +1629,105 @@ def delete_marketing_list_api(list_name):
 @app.route('/upload-marketing-emails-excel', methods=['POST'])
 @login_required
 def upload_marketing_emails_excel():
-    """Upload Excel file with marketing emails and store in Supabase"""
-    if not session.get('is_admin'):
-        return {'error': 'Unauthorized'}, 403
-
+    """
+    Enhanced version that handles duplicates gracefully
+    """
     try:
         if 'excel_file' not in request.files:
-            return {'error': 'Nenhum arquivo foi enviado'}, 400
+            return jsonify({'error': 'No file uploaded'}), 400
 
         file = request.files['excel_file']
-        if file.filename == '':
-            return {'error': 'Nenhum arquivo foi selecionado'}, 400
+        email_column = request.form.get('email_column')
+        list_name = request.form.get('list_name', 'Lista de Marketing')
+        replace_existing = request.form.get('replace_existing', 'false').lower() == 'true'
 
-        # Check file extension
-        if not file.filename.lower().endswith(('.xlsx', '.xls')):
-            return {'error': 'Por favor, selecione um arquivo Excel válido (.xlsx ou .xls)'}, 400
+        if not file or not email_column:
+            return jsonify({'error': 'Missing file or email column'}), 400
 
         # Read Excel file
         df = pd.read_excel(file)
 
-        # Get email column from request
-        email_column = request.form.get('email_column', '')
-        if not email_column:
-            return {'error': 'Coluna de email não especificada'}, 400
-
-        if email_column not in df.columns:
-            return {'error': f'Coluna "{email_column}" não encontrada no arquivo'}, 400
-
-        # Extract emails from the specified column
+        # Extract emails from specified column
         emails = df[email_column].dropna().astype(str).tolist()
 
         # Clean and validate emails
         valid_emails = []
         for email in emails:
-            email = email.strip()
-            if email and '@' in email and '.' in email.split('@')[1]:
+            email = email.strip().lower()
+            if '@' in email and '.' in email:
                 valid_emails.append(email)
 
         if not valid_emails:
-            return {'error': 'Nenhum email válido encontrado no arquivo'}, 400
+            return jsonify({'error': 'No valid emails found in the selected column'}), 400
 
-        # Get list name from request
-        list_name = request.form.get('list_name', 'Lista de Marketing')
-        if not list_name.strip():
-            list_name = 'Lista de Marketing'
-
-        # Store emails in Supabase
-        try:
-            # Check if list already exists and get existing emails
-            existing_emails = []
+        # Handle database operations
+        if replace_existing:
+            # Delete existing emails for this list first
             try:
-                existing_result = supabase.table("marketing_email_lists").select("email").eq("list_name",
-                                                                                             list_name).execute()
-                existing_emails = [row['email'] for row in existing_result.data]
-            except Exception:
-                # List doesn't exist yet, that's fine
-                pass
+                supabase.table('marketing_email_lists').delete().eq('list_name', list_name).execute()
+                logger.info(f"Deleted existing list: {list_name}")
+            except Exception as e:
+                logger.warning(f"Could not delete existing list (may not exist): {e}")
+        else:
+            # Check for existing emails to avoid duplicates
+            try:
+                existing_emails = supabase.table('marketing_email_lists').select('email').eq('list_name', list_name).execute()
+                existing_email_set = {record['email'] for record in existing_emails.data if record['email']}
+                # Filter out emails that already exist
+                valid_emails = [email for email in valid_emails if email not in existing_email_set]
+                logger.info(f"Filtered out {len(existing_email_set)} existing emails from list: {list_name}")
+            except Exception as e:
+                logger.warning(f"Could not check existing emails: {e}")
 
-            # Filter out emails that already exist to avoid duplicates
-            new_emails = []
-            for email in valid_emails:
-                if email not in existing_emails:
-                    new_emails.append(email)
+        # Insert emails one by one, handling duplicates
+        successful_inserts = 0
+        duplicate_count = 0
+        error_count = 0
 
-            if not new_emails:
-                return {
-                    'success': True,
-                    'message': f'Todos os emails já existem na lista "{list_name}". Nenhum novo email adicionado.',
-                    'count': 0,
-                    'list_name': list_name,
-                    'updated': False
-                }
-
-            # Insert only new emails
-            email_records = []
-            for email in new_emails:
-                email_records.append({
+        for email in valid_emails:
+            try:
+                result = supabase.table('marketing_email_lists').insert({
                     'list_name': list_name,
                     'email': email,
-                    'created_at': datetime.now().isoformat()
-                })
+                    'created_at': 'now()'
+                }).execute()
+                successful_inserts += 1
 
-            if email_records:
-                supabase.table("marketing_email_lists").insert(email_records).execute()
+            except Exception as e:
+                error_str = str(e).lower()
+                if 'duplicate key' in error_str or 'unique constraint' in error_str:
+                    duplicate_count += 1
+                    logger.info(f"Duplicate email skipped: {email}")
+                else:
+                    error_count += 1
+                    logger.error(f"Error inserting email {email}: {e}")
 
-            logger.info(
-                f"Added {len(new_emails)} new marketing emails to list '{list_name}' (skipped {len(valid_emails) - len(new_emails)} duplicates)")
-            return {
-                'success': True,
-                'message': f'{len(new_emails)} novos emails adicionados à lista "{list_name}" (duplicados ignorados)',
-                'count': len(new_emails),
-                'list_name': list_name,
-                'updated': True
+        # Prepare response message
+        message_parts = []
+        if successful_inserts > 0:
+            message_parts.append(f"{successful_inserts} emails adicionados com sucesso")
+        if duplicate_count > 0:
+            message_parts.append(f"{duplicate_count} duplicados ignorados")
+        if error_count > 0:
+            message_parts.append(f"{error_count} erros encontrados")
+
+        if successful_inserts == 0 and duplicate_count == 0:
+            return jsonify({'error': 'Nenhum email foi processado'}), 400
+
+        return jsonify({
+            'success': True,
+            'message': f"Lista '{list_name}' atualizada: " + ", ".join(message_parts),
+            'details': {
+                'successful_inserts': successful_inserts,
+                'duplicates_skipped': duplicate_count,
+                'errors': error_count,
+                'total_processed': len(valid_emails)
             }
-
-        except Exception as db_error:
-            logger.error(f"Database error: {str(db_error)}")
-            return {'error': f'Erro ao salvar na base de dados: {str(db_error)}'}, 500
+        })
 
     except Exception as e:
-        logger.error(f"Error uploading marketing emails Excel: {str(e)}")
-        return {'error': f'Erro ao processar arquivo: {str(e)}'}, 500
+        logger.error(f"Error uploading marketing emails: {e}")
+        return jsonify({'error': f'Erro ao processar arquivo: {str(e)}'}), 500
 
 @app.route('/marcar-email-manual/<email>', methods=['POST'])
 def marcar_email_manual(email):
@@ -1725,3 +1752,52 @@ def marcar_email_manual(email):
 #-------Starter--------
 if __name__ == '__main__':
     app.run()
+
+
+def insert_marketing_emails_batch(emails, list_name, ignore_duplicates=True):
+    """
+    Alternative method: Batch insert with duplicate handling
+    """
+    if ignore_duplicates:
+        # Use UPSERT (INSERT ... ON CONFLICT DO NOTHING) if your database supports it
+        try:
+            # For PostgreSQL with Supabase, use upsert
+            result = supabase.table('marketing_email_lists').upsert([
+                {'list_name': list_name, 'email': email} for email in emails
+            ], on_conflict='list_name,email').execute()
+
+            return len(result.data), 0  # successful, duplicates (handled by upsert)
+
+        except Exception as e:
+            logger.error(f"Batch upsert failed: {e}")
+            # Fall back to individual inserts
+            return insert_marketing_emails_individually(emails, list_name)
+    else:
+        # Regular insert (will fail on duplicates)
+        result = supabase.table('marketing_email_lists').insert([
+            {'list_name': list_name, 'email': email} for email in emails
+        ]).execute()
+        return len(result.data), 0
+
+
+def insert_marketing_emails_individually(emails, list_name):
+    """
+    Insert emails one by one, counting successes and duplicates
+    """
+    successful = 0
+    duplicates = 0
+
+    for email in emails:
+        try:
+            supabase.table('marketing_email_lists').insert({
+                'list_name': list_name,
+                'email': email
+            }).execute()
+            successful += 1
+        except Exception as e:
+            if 'duplicate key' in str(e).lower() or 'unique constraint' in str(e).lower():
+                duplicates += 1
+            else:
+                logger.error(f"Error inserting {email}: {e}")
+
+    return successful, duplicates

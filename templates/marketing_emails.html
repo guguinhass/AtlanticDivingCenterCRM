@@ -65,6 +65,19 @@
             text-align: center;
             max-width: 100%;
         }
+
+        .duplicate-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 0.375rem;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        .upload-progress {
+            display: none;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -180,6 +193,17 @@
                                             <small class="text-muted">Nome para identificar esta lista de emails</small>
                                         </div>
                                         <div class="mb-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="replaceExistingList"
+                                                       checked>
+                                                <label class="form-check-label" for="replaceExistingList">
+                                                    Substituir lista existente (se já existir)
+                                                </label>
+                                                <small class="text-muted d-block">Se desmarcado, emails serão
+                                                    adicionados à lista existente</small>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
                                             <button type="button" class="btn btn-outline-primary btn-sm"
                                                     onclick="previewMarketingExcelColumns()">
                                                 🔍 Pré-visualizar Colunas
@@ -189,6 +213,14 @@
                                                     disabled>
                                                 📥 Carregar
                                             </button>
+                                        </div>
+                                        <div id="uploadProgress" class="upload-progress">
+                                            <div class="progress">
+                                                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                                     role="progressbar" style="width: 100%">
+                                                    Processando...
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -206,6 +238,15 @@
                                                 <strong>📋 Pré-visualização:</strong><br>
                                                 <span id="marketingColumnInfo"></span>
                                             </small>
+                                        </div>
+                                        <div id="duplicateWarning" class="duplicate-warning" style="display: none;">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                                <div>
+                                                    <strong>Atenção:</strong> Esta lista já existe!
+                                                    <div id="duplicateDetails" class="small mt-1"></div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -276,13 +317,13 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
                             <div class="mb-3">
                                 <label class="form-label">Opções:</label>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="includeDatabase" checked>
+                                    <input class="form-check-input" type="checkbox" id="includeDatabase" >
                                     <label class="form-check-label" for="includeDatabase">
                                         Incluir clientes da base de dados
                                     </label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="validateEmails" checked>
+                                    <input class="form-check-input" type="checkbox" id="validateEmails">
                                     <label class="form-check-label" for="validateEmails">
                                         Validar formato dos emails
                                     </label>
@@ -382,8 +423,8 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
         document.getElementById('emailStats').style.display = 'block';
 
         // Show results
-        let message = `🔍 Validação de Emails`;
-        message += `✅ ${validCount} emails válidos`;
+        let message = `🔍 Validação de Emails\n`;
+        message += `✅ ${validCount} emails válidos\n`;
         if (invalidCount > 0) {
             message += `❌ ${invalidCount} emails inválidos: ${invalidEmails.join(', ')}`;
         }
@@ -532,6 +573,106 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
     // Marketing email lists handling functions
     let currentMarketingExcelFile = null;
     let currentMarketingColumns = null;
+    let existingEmailLists = [];
+
+    // Load existing lists data
+    function loadExistingEmailLists() {
+        fetch('{{ url_for("get_marketing_email_lists") }}')
+            .then(response => response.json())
+            .then(data => {
+                if (!data.error) {
+                    existingEmailLists = data.lists;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading existing lists:', error);
+            });
+    }
+
+    // Load emails from a specific list into the textarea
+    function loadEmailList(listName) {
+        fetch(`{{ url_for("get_marketing_list_api", list_name="") }}${listName}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(`❌ Erro: ${data.error}`);
+                    return;
+                }
+                
+                // Get the textarea and current content
+                const textarea = document.getElementById('bulkEmails');
+                const currentContent = textarea.value.trim();
+                
+                if (data.emails && data.emails.length > 0) {
+                    let newEmails = data.emails;
+                    
+                    // If there's existing content, merge the lists
+                    if (currentContent) {
+                        // Split existing content into emails
+                        const existingEmails = currentContent.split('\n').filter(email => email.trim());
+                        
+                        // Combine existing and new emails, removing duplicates
+                        const allEmails = [...new Set([...existingEmails, ...newEmails])];
+                        
+                        // Update textarea with merged list
+                        textarea.value = allEmails.join('\n');
+                        
+                        // Show success message with merge info
+                        const addedCount = newEmails.length;
+                        const totalCount = allEmails.length;
+                        const duplicateCount = existingEmails.length + newEmails.length - allEmails.length;
+                        
+                        let message = `✅ Lista "${listName}" adicionada com ${addedCount} emails!\n\n`;
+                        message += `📊 Total na caixa de texto: ${totalCount} emails`;
+                        if (duplicateCount > 0) {
+                            message += `\n🔄 ${duplicateCount} duplicados removidos automaticamente`;
+                        }
+                        
+                        alert(message);
+                    } else {
+                        // No existing content, just load the new list
+                        textarea.value = newEmails.join('\n');
+                        alert(`✅ Lista "${listName}" carregada com ${data.email_count} emails!`);
+                    }
+                    
+                    // Update the list name input if it exists
+                    const listNameInput = document.getElementById('listName');
+                    if (listNameInput) {
+                        listNameInput.value = listName;
+                    }
+                    
+                    // Update email stats with all emails in textarea
+                    const allEmails = textarea.value.split('\n').filter(email => email.trim());
+                    const validCount = allEmails.filter(email => isValidEmail(email)).length;
+                    const invalidCount = allEmails.length - validCount;
+                    
+                    document.getElementById('validEmails').textContent = validCount;
+                    document.getElementById('invalidEmails').textContent = invalidCount;
+                    document.getElementById('emailStats').style.display = 'block';
+                } else {
+                    alert(`⚠️ A lista "${listName}" não contém emails.`);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('❌ Erro ao carregar lista de emails.');
+            });
+    }
+
+    // Check for duplicate list name and show warning
+    function checkForDuplicateList(listName) {
+        const duplicateWarning = document.getElementById('duplicateWarning');
+        const duplicateDetails = document.getElementById('duplicateDetails');
+
+        const existingList = existingEmailLists.find(list => list.list_name === listName);
+
+        if (existingList) {
+            duplicateDetails.textContent = `A lista "${listName}" já existe com ${existingList.email_count} emails.`;
+            duplicateWarning.style.display = 'block';
+        } else {
+            duplicateWarning.style.display = 'none';
+        }
+    }
 
     // Preview marketing Excel columns
     function previewMarketingExcelColumns() {
@@ -598,6 +739,12 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
             .catch(error => {
                 console.error('Error:', error);
                 alert('❌ Erro ao processar arquivo Excel.');
+            })
+            .finally(() => {
+                // Restore button state
+                uploadBtn.innerHTML = originalText;
+                uploadBtn.disabled = false;
+                uploadProgress.style.display = 'none';
             });
     }
 
@@ -619,14 +766,17 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
         }
     }
 
-    // Upload marketing Excel emails to Supabase
+    // Enhanced upload function with better error handling
     function uploadMarketingExcelEmails() {
         const fileInput = document.getElementById('marketingExcelFile');
         const columnSelect = document.getElementById('marketingEmailColumnSelect');
         const listNameInput = document.getElementById('listName');
+        const replaceExistingCheckbox = document.getElementById('replaceExistingList');
+
         const file = fileInput.files[0];
         const selectedColumn = columnSelect.value;
         const listName = listNameInput.value.trim();
+        const replaceExisting = replaceExistingCheckbox.checked;
 
         if (!file) {
             alert('❌ Por favor, selecione um arquivo Excel primeiro.');
@@ -643,123 +793,90 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
             return;
         }
 
+        // Check for duplicates and warn user
+        const existingList = existingEmailLists.find(list => list.list_name === listName);
+        if (existingList && !replaceExisting) {
+            const confirmMessage = `⚠️ A lista "${listName}" já existe com ${existingList.email_count} emails.\n\nEscolha uma opção:\n- Clique OK para adicionar novos emails à lista existente\n- Clique Cancelar e marque "Substituir lista existente" para substituir completamente\n- Clique Cancelar e altere o nome da lista para criar uma nova`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+        }
+
         const formData = new FormData();
         formData.append('excel_file', file);
         formData.append('email_column', selectedColumn);
         formData.append('list_name', listName);
+        formData.append('replace_existing', replaceExisting ? 'true' : 'false');
 
         // Show loading state
         const uploadBtn = document.getElementById('uploadMarketingBtn');
         const originalText = uploadBtn.innerHTML;
+        const uploadProgress = document.getElementById('uploadProgress');
+
         uploadBtn.innerHTML = '⏳ Processando...';
         uploadBtn.disabled = true;
+        uploadProgress.style.display = 'block';
 
         fetch('{{ url_for("upload_marketing_emails_excel") }}', {
             method: 'POST',
             body: formData
         })
-            .then(response => response.json())
+            .then(async response => {
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+
+                return data;
+            })
             .then(data => {
                 if (data.error) {
                     alert(`❌ Erro: ${data.error}`);
                     return;
                 }
 
-                // Show success message
-                alert(`✅ ${data.message}`);
-
-                // Auto-load the updated list into the textarea
-                if (data.success) {
-                    const bulkEmailsTextarea = document.getElementById('bulkEmails');
-                    const listName = document.getElementById('listName').value.trim();
-
-                    // Fetch the updated list and load it
-                    fetch('{{ url_for("get_marketing_email_lists") }}')
-                        .then(response => response.json())
-                        .then(listsData => {
-                            if (!listsData.error) {
-                                const updatedList = listsData.lists.find(l => l.list_name === listName);
-                                if (updatedList) {
-                                    bulkEmailsTextarea.value = updatedList.emails.join('\n');
-                                    alert(`✅ Lista "${listName}" atualizada e carregada automaticamente com ${updatedList.email_count} emails!`);
-
-                                    // Update the existing lists display without page reload
-                                    updateExistingListsDisplay(listsData.lists);
-                                }
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error loading updated list:', error);
-                        });
+                // Show success message with details
+                let message = `✅ ${data.message}`;
+                if (data.details) {
+                    message += `\n\nDetalhes:\n`;
+                    message += `• ${data.details.successful_inserts} emails adicionados\n`;
+                    message += `• ${data.details.duplicates_skipped} duplicados ignorados\n`;
+                    message += `• ${data.details.errors} erros\n`;
+                    message += `• Total processado: ${data.details.total_processed}`;
                 }
+                
+                alert(message);
+                
+                // Refresh the lists display
+                fetch('{{ url_for("get_marketing_email_lists") }}')
+                    .then(response => response.json())
+                    .then(listsData => {
+                        if (!listsData.error) {
+                            updateExistingListsDisplay(listsData.lists);
+                            existingEmailLists = listsData.lists;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error refreshing lists:', error);
+                    });
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('❌ Erro ao carregar emails para Supabase.');
+                alert(`❌ Erro ao processar arquivo Excel: ${error.message}`);
             })
             .finally(() => {
-                // Reset button state
-                uploadBtn.innerHTML = originalText;
+                // Always restore button state and hide progress bar
+                const uploadBtn = document.getElementById('uploadMarketingBtn');
+                const uploadProgress = document.getElementById('uploadProgress');
+                
+                uploadBtn.innerHTML = '📥 Carregar';
                 uploadBtn.disabled = false;
+                uploadProgress.style.display = 'none';
             });
     }
 
-    // Load email list to textarea
-    // Load email list to textarea (with merge functionality)
-    function loadEmailList(listName) {
-        fetch('{{ url_for("get_marketing_email_lists") }}')
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(`❌ Erro: ${data.error}`);
-                    return;
-                }
-
-                const list = data.lists.find(l => l.list_name === listName);
-                if (list) {
-                    const bulkEmailsTextarea = document.getElementById('bulkEmails');
-
-                    // Get existing emails from textarea
-                    const existingEmailText = bulkEmailsTextarea.value.trim();
-                    const existingEmails = existingEmailText ? parseEmails(existingEmailText) : [];
-
-                    // Get new emails from the list
-                    const newEmails = list.emails;
-
-                    // Merge emails and remove duplicates
-                    const allEmails = [...existingEmails, ...newEmails];
-                    const uniqueEmails = [...new Set(allEmails.map(email => email.toLowerCase()))];
-
-                    // Convert back to original case (keep first occurrence case)
-                    const mergedEmails = uniqueEmails.map(lowerEmail => {
-                        return allEmails.find(email => email.toLowerCase() === lowerEmail);
-                    });
-
-                    // Update textarea with merged list
-                    bulkEmailsTextarea.value = mergedEmails.join('\n');
-
-                    // Show confirmation message
-                    const addedCount = mergedEmails.length - existingEmails.length;
-                    if (addedCount > 0) {
-                        alert(`✅ Lista "${listName}" adicionada! ${addedCount} novos emails adicionados. Total: ${mergedEmails.length} emails únicos.`);
-                    } else {
-                        alert(`ℹ️ Lista "${listName}" carregada, mas todos os emails já estavam na lista. Total: ${mergedEmails.length} emails.`);
-                    }
-
-                    // Trigger email validation display
-                    bulkEmailsTextarea.dispatchEvent(new Event('input'));
-
-                } else {
-                    alert(`❌ Lista "${listName}" não encontrada.`);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('❌ Erro ao carregar lista de emails.');
-            });
-    }
-
-    // Delete email list
     function deleteEmailList(listName) {
         if (!confirm(`Tem certeza que deseja remover a lista "${listName}"? Esta ação não pode ser desfeita.`)) {
             return;
@@ -846,6 +963,11 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
         });
     }
 
+    // Load existing email lists when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadExistingEmailLists();
+    });
+
     // Update existing lists display without page reload
     function updateExistingListsDisplay(lists) {
         const container = document.getElementById('existingListsContainer');
@@ -885,93 +1007,5 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
         container.innerHTML = html;
     }
 
-    // Global variable to store attachments
-    let emailAttachments = [];
 
-    function attachImage() {
-        const imageInput = document.getElementById('imageInput');
-        if (imageInput) {
-            imageInput.click();
-        } else {
-            console.error('Image input element not found');
-        }
-    }
-
-    function handleImageUpload(input) {
-        const file = input.files[0];
-        if (file) {
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                alert('Por favor, selecione apenas arquivos de imagem.');
-                input.value = '';
-                return;
-            }
-
-            // Validate file size (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                alert('A imagem deve ter menos de 5MB.');
-                input.value = '';
-                return;
-            }
-
-            // Add file to attachments list
-            addAttachmentToList(file);
-        }
-        // Reset input
-        input.value = '';
-    }
-
-    function addAttachmentToList(file) {
-        const attachmentId = 'attachment_' + Date.now();
-        const fileSize = (file.size / 1024).toFixed(1) + ' KB';
-
-        // Add to attachments array
-        emailAttachments.push({
-            id: attachmentId,
-            file: file,
-            name: file.name,
-            size: fileSize,
-            type: file.type
-        });
-
-        // Create attachment item HTML
-        const attachmentItem = document.createElement('div');
-        attachmentItem.className = 'attachment-item d-flex align-items-center justify-content-between p-2 border-bottom';
-        attachmentItem.id = attachmentId;
-        attachmentItem.innerHTML = `
-            <div class="d-flex align-items-center">
-                <i class="fas fa-image text-primary me-2"></i>
-                <div>
-                    <div class="fw-bold">${file.name}</div>
-                    <small class="text-muted">${fileSize}</small>
-                </div>
-            </div>
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAttachment('${attachmentId}')">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-
-        // Add to attachment list
-        document.getElementById('attachmentItems').appendChild(attachmentItem);
-        document.getElementById('attachmentList').style.display = 'block';
-    }
-
-    function removeAttachment(attachmentId) {
-        // Remove from attachments array
-        emailAttachments = emailAttachments.filter(att => att.id !== attachmentId);
-
-        // Remove from DOM
-        const attachmentItem = document.getElementById(attachmentId);
-        if (attachmentItem) {
-            attachmentItem.remove();
-        }
-
-        // Hide attachment list if empty
-        if (emailAttachments.length === 0) {
-            document.getElementById('attachmentList').style.display = 'none';
-        }
-    }
 </script>
-
-</body>
-</html> 
