@@ -41,17 +41,6 @@ app = Flask(__name__)
 
 # Increase maximum request size to handle large email templates
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB limit
-
-
-
-
-
-
-
-
-
-
-
 # ------------Login Credentials-------------
 app.secret_key = os.getenv('APP_SECRET_KEY')
 
@@ -271,19 +260,31 @@ def email_feedback(cliente, template_type='primeiro'):
 
 
 def check_and_send_emails():
-    """Check and send emails with minimum delay enforcement"""
+    """Check and send emails with minimum delay enforcement - DEBUG VERSION"""
     try:
         with app.app_context():
             logger.info(f"=== EMAIL CHECK STARTED - PID: {os.getpid()} ===")
             hoje = datetime.now()
+            logger.info(f"Current time: {hoje}")
+            logger.info(f"MIN_EMAIL_DELAY_HOURS: {MIN_EMAIL_DELAY_HOURS}")
+
             response = supabase.table("clientes").select("*").execute()
             clientes = response.data
             logger.info(f"Checking emails for {len(clientes)} clients")
 
             for cliente in clientes:
                 try:
+                    logger.info(f"\n--- Processing client: {cliente['email']} ---")
+                    logger.info(f"Client data: {cliente}")
+
                     data_mergulho = datetime.strptime(cliente['data_mergulho'], '%Y-%m-%d').date()
                     dias_passados = (hoje.date() - data_mergulho).days
+
+                    logger.info(f"Dive date: {data_mergulho}")
+                    logger.info(f"Days passed: {dias_passados}")
+                    logger.info(f"First email sent: {cliente['primeiro_email_enviado']}")
+                    logger.info(f"Second email sent: {cliente['segundo_email_enviado']}")
+                    logger.info(f"First email timestamp: {cliente.get('primeiro_email_enviado_em')}")
 
                     # First email logic (1+ days after dive)
                     if dias_passados >= 1 and not cliente['primeiro_email_enviado']:
@@ -296,29 +297,118 @@ def check_and_send_emails():
                                 "primeiro_email_enviado_em": hoje.isoformat()
                             }).eq("email", cliente['email']).execute()
                             logger.info(f"SUCCESS: First email sent to {cliente['email']}")
+                        else:
+                            logger.error(f"FAILED: First email to {cliente['email']}")
 
-                    # Second email logic (3+ days after dive AND at least 24h after first email)
-                    if dias_passados >= 3 and not cliente['segundo_email_enviado']:
+                    # Second email logic - detailed debugging
+                    logger.info(f"Checking second email conditions...")
+                    logger.info(f"  - segundo_email_enviado: {cliente['segundo_email_enviado']}")
+
+                    if not cliente['segundo_email_enviado']:
+                        logger.info(f"  - Second email not sent yet, checking other conditions...")
+                        logger.info(f"  - primeiro_email_enviado: {cliente['primeiro_email_enviado']}")
+                        logger.info(f"  - primeiro_email_enviado_em: {cliente.get('primeiro_email_enviado_em')}")
+
                         # Check if first email was sent and when
                         if cliente['primeiro_email_enviado'] and cliente.get('primeiro_email_enviado_em'):
-                            primeiro_email_time = datetime.fromisoformat(cliente['primeiro_email_enviado_em'])
-                            hours_since_first_email = (hoje - primeiro_email_time).total_seconds() / 3600
+                            try:
+                                primeiro_email_time = datetime.fromisoformat(cliente['primeiro_email_enviado_em'])
+                                hours_since_first_email = (hoje - primeiro_email_time).total_seconds() / 3600
 
-                            if hours_since_first_email >= 24:  # Minimum 24h delay
-                                logger.info(f"ATTEMPTING: Second email to {cliente['email']}")
-                                if email_feedback(cliente, 'segundo'):
-                                    supabase.table("clientes").update({
-                                        "segundo_email_enviado": True,
-                                        "segundo_email_enviado_em": hoje.isoformat()
-                                    }).eq("email", cliente['email']).execute()
-                                    logger.info(f"SUCCESS: Second email sent to {cliente['email']}")
+                                logger.info(f"  - First email sent at: {primeiro_email_time}")
+                                logger.info(f"  - Hours since first email: {hours_since_first_email:.2f}")
+                                logger.info(f"  - Required delay: {MIN_EMAIL_DELAY_HOURS}")
+                                logger.info(
+                                    f"  - Delay condition met: {hours_since_first_email >= MIN_EMAIL_DELAY_HOURS}")
+
+                                if hours_since_first_email >= MIN_EMAIL_DELAY_HOURS:
+                                    logger.info(
+                                        f"ATTEMPTING: Second email to {cliente['email']} ({hours_since_first_email:.2f} hours after first)")
+                                    if email_feedback(cliente, 'segundo'):
+                                        supabase.table("clientes").update({
+                                            "segundo_email_enviado": True,
+                                            "segundo_email_enviado_em": hoje.isoformat()
+                                        }).eq("email", cliente['email']).execute()
+                                        logger.info(f"SUCCESS: Second email sent to {cliente['email']}")
+                                    else:
+                                        logger.error(f"FAILED: Second email to {cliente['email']}")
+                                else:
+                                    logger.info(
+                                        f"WAITING: Second email for {cliente['email']} - need {MIN_EMAIL_DELAY_HOURS - hours_since_first_email:.2f} more hours")
+                            except Exception as time_error:
+                                logger.error(f"Error parsing first email timestamp: {time_error}")
+                        else:
+                            logger.info(f"  - First email not sent yet or timestamp missing")
+                    else:
+                        logger.info(f"  - Second email already sent")
 
                 except Exception as client_error:
                     logger.error(f"Error processing client {cliente.get('email', 'unknown')}: {str(client_error)}")
                     continue
 
+            logger.info(f"=== EMAIL CHECK COMPLETED ===\n")
+
     except Exception as e:
         logger.error(f"Critical error in check_and_send_emails: {str(e)}")
+
+
+# Also add this test route to manually trigger email checking:
+@app.route('/test-emails')
+@login_required
+def test_emails():
+    """Manual trigger for email checking (for testing)"""
+    if not session.get('is_admin'):
+        return 'Unauthorized', 403
+
+    logger.info("Manual email check triggered")
+    check_and_send_emails()
+    return "Email check completed. Check logs for details."
+
+
+# Add this route to check a specific client's status:
+@app.route('/debug-client/<email>')
+@login_required
+def debug_client_detailed(email):
+    """Detailed debug info for a specific client"""
+    if not session.get('is_admin'):
+        return 'Unauthorized', 403
+
+    try:
+        response = supabase.table("clientes").select("*").eq("email", email).execute()
+        if not response.data:
+            return {'error': 'Cliente não encontrado'}, 404
+
+        cliente = response.data[0]
+        data_mergulho = datetime.strptime(cliente["data_mergulho"], "%Y-%m-%d").date()
+        hoje = datetime.now()
+        dias_passados = (hoje.date() - data_mergulho).days
+
+        debug_info = {
+            'email': cliente['email'],
+            'nome': cliente['nome'],
+            'data_mergulho': str(data_mergulho),
+            'dias_passados': dias_passados,
+            'primeiro_email_enviado': cliente['primeiro_email_enviado'],
+            'segundo_email_enviado': cliente['segundo_email_enviado'],
+            'primeiro_email_enviado_em': cliente.get('primeiro_email_enviado_em'),
+            'current_time': hoje.isoformat(),
+            'min_delay_hours': MIN_EMAIL_DELAY_HOURS
+        }
+
+        # Calculate time since first email if available
+        if cliente.get('primeiro_email_enviado_em'):
+            try:
+                primeiro_email_time = datetime.fromisoformat(cliente['primeiro_email_enviado_em'])
+                hours_since_first = (hoje - primeiro_email_time).total_seconds() / 3600
+                debug_info['hours_since_first_email'] = hours_since_first
+                debug_info['can_send_second_email'] = hours_since_first >= MIN_EMAIL_DELAY_HOURS
+            except:
+                debug_info['hours_since_first_email'] = 'Error parsing timestamp'
+
+        return debug_info
+
+    except Exception as e:
+        return {'error': str(e)}, 500
 
 
 # ------Email Sending Scheduler-------
@@ -989,11 +1079,11 @@ def manage_users():
         username = request.form['username']
         password = request.form['password']
         is_admin = bool(int(request.form.get('is_admin', 0)))
-        password_hash = password
+
         try:
             supabase.table("usuarios").insert({
                 "username": username,
-                "password_hash": password_hash,
+                "password_hash": password,  # Store as plain text
                 "is_admin": is_admin
             }).execute()
             flash("Usuário criado com sucesso!", 'success')
@@ -1023,7 +1113,7 @@ def manage_users():
 
             # Only update password if a new one is provided
             if password.strip():
-                update_data["password_hash"] = password
+                update_data["password_hash"] = password  # Store as plain text
 
             # Update the user
             supabase.table("usuarios").update(update_data).eq("id", user_id).execute()
@@ -1044,28 +1134,103 @@ def manage_users():
     users = supabase.table("usuarios").select("*").execute().data
     return render_template("admin_users.html", users=users)
 
-
 # ----------Login-------------
+# Replace your login route with this debug version to see what's happening:
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         entered_username = request.form.get('username', '').strip()
         entered_password = request.form.get('password', '')
+
         if not entered_username or not entered_password:
             flash('Por favor, preencha todos os campos.', 'danger')
             return render_template('login.html')
 
-        user_data = supabase.table("usuarios").select("*").eq("username", entered_username).execute().data
-        if user_data and user_data[0]['password_hash'] == entered_password:
-            session['logged_in'] = True
-            session['username'] = entered_username
-            session['is_admin'] = bool(user_data[0]['is_admin'])
-            return redirect(url_for('index'))
-        else:
-            logger.info('Invalid credentials')
-            flash('Usuário ou senha inválidos', 'danger')
+        try:
+            # Debug logging to see what's happening
+            logger.info(f"=== LOGIN DEBUG ===")
+            logger.info(f"Entered username: '{entered_username}'")
+            logger.info(f"Entered password: '{entered_password}'")
+
+            # First, let's try to get ALL users to see if the connection works
+            all_users = supabase.table("usuarios").select("*").execute()
+            logger.info(f"All users in database: {all_users.data}")
+
+            # Now try the specific query
+            user_data = supabase.table("usuarios").select("*").eq("username", entered_username).execute()
+            logger.info(f"Specific user query result: {user_data.data}")
+
+            # Let's also try with different variations
+            user_data_lower = supabase.table("usuarios").select("*").eq("username", entered_username.lower()).execute()
+            logger.info(f"Lowercase username query: {user_data_lower.data}")
+
+            user_data_upper = supabase.table("usuarios").select("*").eq("username", entered_username.upper()).execute()
+            logger.info(f"Uppercase username query: {user_data_upper.data}")
+
+            # Check if we got any results
+            if user_data.data and len(user_data.data) > 0:
+                user = user_data.data[0]
+                stored_password = user['password_hash']
+                logger.info(f"Found user: {user}")
+                logger.info(f"Stored password: '{stored_password}'")
+
+                if stored_password == entered_password:
+                    session['logged_in'] = True
+                    session['username'] = entered_username
+                    session['is_admin'] = bool(user['is_admin'])
+                    logger.info(f"Login successful for: {entered_username}")
+                    return redirect(url_for('index'))
+                else:
+                    logger.info(f"Password mismatch. Stored: '{stored_password}', Entered: '{entered_password}'")
+
+            # Try case-insensitive search as fallback
+            elif user_data_lower.data and len(user_data_lower.data) > 0:
+                user = user_data_lower.data[0]
+                stored_password = user['password_hash']
+                logger.info(f"Found user with lowercase search: {user}")
+
+                if stored_password == entered_password:
+                    session['logged_in'] = True
+                    session['username'] = user['username']  # Use the actual username from DB
+                    session['is_admin'] = bool(user['is_admin'])
+                    logger.info(f"Login successful (case-insensitive) for: {user['username']}")
+                    return redirect(url_for('index'))
+
+            else:
+                logger.info(f"No user found with username: '{entered_username}'")
+
+        except Exception as e:
+            logger.error(f"Login error: {str(e)}")
+            logger.error(f"Exception type: {type(e)}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+            flash(f'Erro no login: {str(e)}', 'danger')
+            return render_template('login.html')
+
+        flash('Usuário ou senha inválidos', 'danger')
+
     return render_template('login.html')
 
+
+# Also add this test route to verify your Supabase connection:
+@app.route('/test-db')
+def test_db():
+    """Test route to check database connection"""
+    try:
+        # Try to get all users
+        result = supabase.table("usuarios").select("*").execute()
+        return {
+            'success': True,
+            'data': result.data,
+            'count': len(result.data) if result.data else 0
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e),
+            'type': str(type(e))
+        }
 
 # -------Iva setter--------
 @app.route('/set-iva', methods=['POST'])
@@ -2006,31 +2171,65 @@ def upload_marketing_emails_excel():
         # Clean and validate emails
         valid_emails = []
         invalid_emails = []
+        empty_entries = 0
         
-        for email in emails:
-            email_str = str(email).strip().lower()
+        logger.info(f"Starting email validation for {len(emails)} entries")
+        
+        for i, email in enumerate(emails):
+            email_str = str(email).strip()
+            original_email = email_str  # Keep original for logging
+            email_str = email_str.lower()
+            
+            # Log first few entries for debugging
+            if i < 5:
+                logger.info(f"Processing email {i+1}: '{original_email}' -> '{email_str}'")
+            
             # Skip empty or NaN values
-            if email_str in ['', 'nan', 'none', 'null']:
+            if email_str in ['', 'nan', 'none', 'null'] or pd.isna(email):
+                empty_entries += 1
                 continue
                 
-            # Basic email validation
+            # Basic email validation - very lenient
             if '@' in email_str and '.' in email_str and len(email_str) > 5:
-                # More thorough validation
+                # Try multiple validation approaches
                 import re
-                email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-                if re.match(email_pattern, email_str):
+                
+                # Very lenient pattern - just check basic structure
+                basic_pattern = r'^[^@\s]+@[^@\s]+\.[^@\s]+$'
+                # More strict pattern
+                strict_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                
+                if re.match(basic_pattern, email_str):
                     valid_emails.append(email_str)
+                    if len(valid_emails) <= 3:  # Log first few valid emails
+                        logger.info(f"Valid email found (basic pattern): '{email_str}'")
+                elif re.match(strict_pattern, email_str):
+                    valid_emails.append(email_str)
+                    if len(valid_emails) <= 3:  # Log first few valid emails
+                        logger.info(f"Valid email found (strict pattern): '{email_str}'")
                 else:
-                    invalid_emails.append(email_str)
+                    # Even more lenient - just check if it looks like an email
+                    parts = email_str.split('@')
+                    if len(parts) == 2 and '.' in parts[1] and len(parts[0]) > 0 and len(parts[1]) > 2:
+                        valid_emails.append(email_str)
+                        if len(valid_emails) <= 3:  # Log first few valid emails
+                            logger.info(f"Valid email found (manual check): '{email_str}'")
+                    else:
+                        invalid_emails.append(original_email)
+                        if len(invalid_emails) <= 3:  # Log first few invalid emails
+                            logger.info(f"Invalid email (all patterns failed): '{original_email}'")
             else:
-                invalid_emails.append(email_str)
+                invalid_emails.append(original_email)
+                if len(invalid_emails) <= 3:  # Log first few invalid emails
+                    logger.info(f"Invalid email (basic check failed): '{original_email}'")
 
-        logger.info(f"Email validation results - Valid: {len(valid_emails)}, Invalid: {len(invalid_emails)}")
+        logger.info(f"Email validation results - Valid: {len(valid_emails)}, Invalid: {len(invalid_emails)}, Empty: {empty_entries}")
         
         if not valid_emails:
-            error_msg = f'No valid emails found in the selected column. Found {len(invalid_emails)} invalid entries.'
+            error_msg = f'No valid emails found in the selected column "{email_column}". '
+            error_msg += f'Found {len(invalid_emails)} invalid entries and {empty_entries} empty entries.'
             if invalid_emails[:5]:  # Show first 5 invalid emails as examples
-                error_msg += f' Examples of invalid entries: {", ".join(invalid_emails[:5])}'
+                error_msg += f' Examples of entries found: {", ".join(str(e) for e in invalid_emails[:5])}'
             logger.error(error_msg)
             return jsonify({'error': error_msg}), 400
 
@@ -2162,6 +2361,126 @@ def debug_upload_params():
         return jsonify({'error': str(e)}), 500
 
 
+# Debug endpoint to test Excel file reading
+@app.route('/debug-excel-content', methods=['POST'])
+@login_required
+def debug_excel_content():
+    """Debug endpoint to see what's actually in the Excel file"""
+    try:
+        if 'excel_file' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
+
+        file = request.files['excel_file']
+        email_column = request.form.get('email_column')
+        sheet_name = request.form.get('sheet_name', '').strip()
+
+        logger.info(f"=== DEBUG EXCEL CONTENT ===")
+        logger.info(f"File: {file.filename}, Column: {email_column}, Sheet: {sheet_name}")
+
+        # Read Excel file
+        if sheet_name:
+            df = pd.read_excel(file, sheet_name=sheet_name)
+        else:
+            df = pd.read_excel(file)
+
+        logger.info(f"Excel shape: {df.shape}")
+        logger.info(f"Columns: {list(df.columns)}")
+
+        response = {
+            'filename': file.filename,
+            'sheet_name': sheet_name,
+            'shape': df.shape,
+            'columns': list(df.columns),
+            'sample_data': {}
+        }
+
+        # If email column is specified, show sample data from that column
+        if email_column and email_column in df.columns:
+            column_data = df[email_column].dropna().head(10).tolist()
+            response['sample_data'][email_column] = [str(item) for item in column_data]
+            logger.info(f"Sample data from {email_column}: {column_data}")
+        else:
+            # Show sample data from all columns
+            for col in df.columns:
+                sample_data = df[col].dropna().head(5).tolist()
+                response['sample_data'][col] = [str(item) for item in sample_data]
+
+        return jsonify(response)
+    except Exception as e:
+        logger.error(f"Debug Excel content error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# Generate test Excel file for debugging
+@app.route('/generate-test-excel', methods=['GET'])
+@login_required
+def generate_test_excel():
+    """Generate a test Excel file with sample emails"""
+    try:
+        import io
+        from flask import send_file
+        
+        # Create sample data
+        data = {
+            'Email': [
+                'joao.silva@gmail.com',
+                'maria.santos@hotmail.com',
+                'pedro.oliveira@yahoo.com',
+                'ana.costa@outlook.com',
+                'carlos.ferreira@gmail.com',
+                'lucia.pereira@company.com',
+                'rafael.almeida@test.com',
+                'fernanda.rodrigues@example.org',
+                'gustavo.lima@domain.net',
+                'patricia.souza@email.com'
+            ],
+            'Nome': [
+                'João Silva',
+                'Maria Santos',
+                'Pedro Oliveira',
+                'Ana Costa',
+                'Carlos Ferreira',
+                'Lúcia Pereira',
+                'Rafael Almeida',
+                'Fernanda Rodrigues',
+                'Gustavo Lima',
+                'Patrícia Souza'
+            ],
+            'Telefone': [
+                '(11) 99999-1111',
+                '(11) 99999-2222',
+                '(11) 99999-3333',
+                '(11) 99999-4444',
+                '(11) 99999-5555',
+                '(11) 99999-6666',
+                '(11) 99999-7777',
+                '(11) 99999-8888',
+                '(11) 99999-9999',
+                '(11) 99999-0000'
+            ]
+        }
+        
+        df = pd.DataFrame(data)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Emails', index=False)
+        
+        output.seek(0)
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='test_emails.xlsx'
+        )
+        
+    except Exception as e:
+        logger.error(f"Error generating test Excel: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/marcar-email-manual/<email>', methods=['POST'])
 def marcar_email_manual(email):
     resultado = supabase.table("clientes").select("*").eq("email", email).execute()
@@ -2180,15 +2499,6 @@ def marcar_email_manual(email):
         flash("O email já estava marcado como enviado.", "info")
 
     return redirect(url_for("index"))
-
-
-
-
-
-
-
-
-
 
 # -------Starter--------
 if __name__ == '__main__':
