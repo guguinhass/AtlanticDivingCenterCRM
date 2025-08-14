@@ -649,7 +649,8 @@ joao@email.com, maria@email.com, pedro@email.com"></textarea>
                 const currentContent = textarea.value.trim();
                 
                 if (data.emails && data.emails.length > 0) {
-                    let newEmails = data.emails;
+                    // Support both array of strings and array of objects { email, name, phone }
+                    let newEmails = data.emails.map(e => typeof e === 'string' ? e : (e.email || '')).filter(Boolean);
                     
                     // If there's existing content, merge the lists
                     if (currentContent) {

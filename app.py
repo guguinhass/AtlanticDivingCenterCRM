@@ -1535,12 +1535,26 @@ def get_marketing_list_api(list_name):
     try:
         response = supabase.table("marketing_email_lists").select("*").eq("list_name", list_name).execute()
 
-        emails = [record['email'] for record in response.data]
+        # Build rich entries if optional fields exist; fall back to simple strings
+        entries = []
+        for record in response.data:
+            email_value = record.get('email')
+            # Some rows might be placeholders (email is None)
+            if not email_value:
+                continue
+            name_value = record.get('name') or record.get('nome')
+            phone_value = record.get('phone') or record.get('telefone')
+            entry = {
+                'email': email_value,
+                'name': name_value or '',
+                'phone': phone_value or ''
+            }
+            entries.append(entry)
 
         return {
             'list_name': list_name,
-            'emails': emails,
-            'email_count': len(emails)
+            'emails': entries,
+            'email_count': len(entries)
         }
 
     except Exception as e:
@@ -1558,34 +1572,63 @@ def save_marketing_list_api():
     try:
         data = request.get_json()
         list_name = data.get('list_name', '').strip()
-        emails = data.get('emails', [])
+        emails_payload = data.get('emails', [])
 
         if not list_name:
             return {'error': 'Nome da lista é obrigatório'}, 400
 
-        # Validate emails
-        valid_emails = []
-        for email in emails:
-            email = email.strip()
-            if email and '@' in email and '.' in email.split('@')[1]:
-                valid_emails.append(email)
+        # Normalize to list of entries { email, name?, phone? }
+        normalized_entries = []
+        for item in emails_payload:
+            if isinstance(item, dict):
+                raw_email = (item.get('email') or '').strip()
+                name = (item.get('name') or '').strip()
+                phone = (item.get('phone') or '').strip()
+            else:
+                raw_email = str(item).strip()
+                name = ''
+                phone = ''
+
+            if raw_email and '@' in raw_email and '.' in raw_email.split('@')[-1]:
+                normalized_entries.append({'email': raw_email, 'name': name, 'phone': phone})
 
         # Remove duplicates
-        valid_emails = list(set(valid_emails))
+        seen = set()
+        unique_entries = []
+        for entry in normalized_entries:
+            email_key = entry['email'].lower()
+            if email_key in seen:
+                continue
+            seen.add(email_key)
+            unique_entries.append(entry)
 
         # Delete existing list
         supabase.table("marketing_email_lists").delete().eq("list_name", list_name).execute()
 
-        # Insert new emails
-        if valid_emails:
-            email_records = []
-            for email in valid_emails:
-                email_records.append({
-                    'list_name': list_name,
-                    'email': email,
-                    'created_at': datetime.now().isoformat()
-                })
-            supabase.table("marketing_email_lists").insert(email_records).execute()
+        # Insert new emails (with optional name/phone when supported)
+        if unique_entries:
+            try:
+                email_records = []
+                for entry in unique_entries:
+                    email_records.append({
+                        'list_name': list_name,
+                        'email': entry['email'],
+                        'name': entry.get('name') or None,
+                        'phone': entry.get('phone') or None,
+                        'created_at': datetime.now().isoformat()
+                    })
+                supabase.table("marketing_email_lists").insert(email_records).execute()
+            except Exception as insert_err:
+                # Fallback for schemas without name/phone columns
+                logger.warning(f"Insert with name/phone failed, falling back to email only: {insert_err}")
+                email_records = []
+                for entry in unique_entries:
+                    email_records.append({
+                        'list_name': list_name,
+                        'email': entry['email'],
+                        'created_at': datetime.now().isoformat()
+                    })
+                supabase.table("marketing_email_lists").insert(email_records).execute()
         else:
             # Insert a placeholder record for the list with no emails
             supabase.table("marketing_email_lists").insert([{
@@ -1594,12 +1637,12 @@ def save_marketing_list_api():
                 'created_at': datetime.now().isoformat()
             }]).execute()
 
-        logger.info(f"Saved marketing list '{list_name}' with {len(valid_emails)} emails")
+        logger.info(f"Saved marketing list '{list_name}' with {len(unique_entries)} emails")
         return {
             'success': True,
-            'message': f'Lista "{list_name}" salva com {len(valid_emails)} emails',
+            'message': f'Lista "{list_name}" salva com {len(unique_entries)} emails',
             'list_name': list_name,
-            'email_count': len(valid_emails)
+            'email_count': len(unique_entries)
         }
 
     except Exception as e:

@@ -11,20 +11,20 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-
+        
         .editor-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 20px;
             border-radius: 8px 8px 0 0;
         }
-
+        
         .email-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
-
+        
         .email-table th {
             background: #f8f9fa;
             padding: 12px;
@@ -32,17 +32,17 @@
             font-weight: 600;
             text-align: left;
         }
-
+        
         .email-table td {
             padding: 8px 12px;
             border: 1px solid #dee2e6;
             vertical-align: middle;
         }
-
+        
         .email-table tr:hover {
             background-color: #f8f9fa;
         }
-
+        
         .editable-cell {
             border: none;
             background: transparent;
@@ -50,47 +50,47 @@
             padding: 4px;
             font-size: 14px;
         }
-
+        
         .editable-cell:focus {
             outline: 2px solid #007bff;
             background: white;
             border-radius: 4px;
         }
-
+        
         .invalid-email {
             background-color: #ffe6e6;
             border: 1px solid #ffcccc;
         }
-
+        
         .valid-email {
             background-color: #e6ffe6;
             border: 1px solid #ccffcc;
         }
-
+        
         .action-buttons {
             display: flex;
             gap: 5px;
         }
-
+        
         .btn-sm {
             padding: 4px 8px;
             font-size: 12px;
         }
-
+        
         .status-indicator {
             position: fixed;
             top: 20px;
             right: 20px;
             z-index: 1000;
         }
-
+        
         .list-selector {
             background: #f8f9fa;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
         }
-
+        
         .list-card {
             border: 1px solid #dee2e6;
             border-radius: 8px;
@@ -98,17 +98,17 @@
             margin-bottom: 10px;
             transition: all 0.3s ease;
         }
-
+        
         .list-card:hover {
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             transform: translateY(-2px);
         }
-
+        
         .list-card.active {
             border-color: #007bff;
             background-color: #f0f8ff;
         }
-
+        
         .stats-bar {
             background: #e9ecef;
             padding: 10px 15px;
@@ -212,14 +212,14 @@
                 </div>
             </div>
         </div>
-
+        
         <div class="p-4">
             <!-- Stats Bar -->
             <div class="stats-bar" id="statsBar">
                 <i class="fas fa-info-circle"></i>
                 <span id="statsText">Carregando estatísticas...</span>
             </div>
-
+            
             <!-- Email Table -->
             <div class="table-responsive">
                 <table class="email-table" id="emailTable">
@@ -237,7 +237,7 @@
                     </tbody>
                 </table>
             </div>
-
+            
             <!-- Empty State -->
             <div id="emptyState" class="text-center py-5" style="display: none;">
                 <i class="fas fa-envelope fa-3x text-muted mb-3"></i>
@@ -328,40 +328,44 @@
 
         document.getElementById('emptyState').style.display = 'none';
 
-        currentList.emails.forEach((email, index) => {
-            addRowToTable(email, index);
+        currentList.emails.forEach((entry, index) => {
+            addRowToTable(entry, index);
         });
     }
 
     // Add new row
     function addNewRow() {
-        addRowToTable('', currentList.emails.length);
+        const newEntry = { email: '', name: '', phone: '' };
+        currentList.emails.push(newEntry);
+        addRowToTable(newEntry, currentList.emails.length - 1);
         hasUnsavedChanges = true;
         updateStats();
     }
 
     // Add row to table
-    function addRowToTable(email, index) {
+    function addRowToTable(entry, index) {
         const tbody = document.getElementById('emailTableBody');
         const row = document.createElement('tr');
         row.id = `row-${rowCounter}`;
-
+        
         row.innerHTML = `
             <td>${index + 1}</td>
             <td>
-                <input type="email" class="form-control editable-cell"
-                       value="${email}"
-                       onchange="updateEmail(${rowCounter}, this.value)"
+                <input type="email" class="form-control editable-cell" 
+                       value="${entry && entry.email ? entry.email : ''}" 
+                       oninput="updateEmail(${rowCounter}, this.value)"
                        placeholder="email@exemplo.com">
             </td>
             <td>
-                <input type="text" class="form-control editable-cell"
-                       onchange="updateName(${rowCounter}, this.value)"
+                <input type="text" class="form-control editable-cell" 
+                       value="${entry && entry.name ? entry.name : ''}"
+                       oninput="updateName(${rowCounter}, this.value)"
                        placeholder="Nome (opcional)">
             </td>
             <td>
-                <input type="text" class="form-control editable-cell"
-                       onchange="updatePhone(${rowCounter}, this.value)"
+                <input type="text" class="form-control editable-cell" 
+                       value="${entry && entry.phone ? entry.phone : ''}"
+                       oninput="updatePhone(${rowCounter}, this.value)"
                        placeholder="Telefone (opcional)">
             </td>
             <td>
@@ -372,7 +376,7 @@
                 </div>
             </td>
         `;
-
+        
         tbody.appendChild(row);
         rowCounter++;
     }
@@ -381,7 +385,7 @@
     function updateEmail(rowIndex, value) {
         const row = document.getElementById(`row-${rowIndex}`);
         const emailCell = row.querySelector('input[type="email"]');
-
+        
         // Validate email
         if (value && !isValidEmail(value)) {
             emailCell.classList.add('invalid-email');
@@ -390,17 +394,34 @@
             emailCell.classList.add('valid-email');
         }
 
+        // Sync to model
+        const modelIndex = Array.from(document.querySelectorAll('#emailTableBody tr')).indexOf(row);
+        if (modelIndex >= 0 && currentList.emails[modelIndex]) {
+            currentList.emails[modelIndex].email = value.trim();
+        }
         hasUnsavedChanges = true;
         updateStats();
     }
 
     // Update name
     function updateName(rowIndex, value) {
+        const row = document.getElementById(`row-${rowIndex}`);
+        const modelIndex = Array.from(document.querySelectorAll('#emailTableBody tr')).indexOf(row);
+        if (modelIndex >= 0) {
+            if (!currentList.emails[modelIndex]) currentList.emails[modelIndex] = { email: '', name: '', phone: '' };
+            currentList.emails[modelIndex].name = value;
+        }
         hasUnsavedChanges = true;
     }
 
     // Update phone
     function updatePhone(rowIndex, value) {
+        const row = document.getElementById(`row-${rowIndex}`);
+        const modelIndex = Array.from(document.querySelectorAll('#emailTableBody tr')).indexOf(row);
+        if (modelIndex >= 0) {
+            if (!currentList.emails[modelIndex]) currentList.emails[modelIndex] = { email: '', name: '', phone: '' };
+            currentList.emails[modelIndex].phone = value;
+        }
         hasUnsavedChanges = true;
     }
 
@@ -417,17 +438,23 @@
     function saveList(isAutoSave = false) {
         if (!currentList) return;
 
-        const emails = [];
         const rows = document.querySelectorAll('#emailTableBody tr');
-
+        const entries = [];
         rows.forEach(row => {
             const emailInput = row.querySelector('input[type="email"]');
-            if (emailInput && emailInput.value.trim()) {
-                emails.push(emailInput.value.trim());
+            const nameInput = row.querySelector('input[placeholder="Nome (opcional)"]');
+            const phoneInput = row.querySelector('input[placeholder="Telefone (opcional)"]');
+            const email = emailInput ? emailInput.value.trim() : '';
+            if (email) {
+                entries.push({
+                    email,
+                    name: nameInput ? nameInput.value.trim() : '',
+                    phone: phoneInput ? phoneInput.value.trim() : ''
+                });
             }
         });
 
-        currentList.emails = emails;
+        currentList.emails = entries;
 
         fetch('/api/marketing-list', {
             method: 'POST',
@@ -501,13 +528,13 @@
 
         const statsText = document.getElementById('statsText');
         const currentListStats = document.getElementById('currentListStats');
-
+        
         statsText.innerHTML = `
-            <strong>${totalEmails}</strong> emails totais |
-            <span class="text-success"><strong>${validEmails}</strong> válidos</span> |
+            <strong>${totalEmails}</strong> emails totais | 
+            <span class="text-success"><strong>${validEmails}</strong> válidos</span> | 
             <span class="text-danger"><strong>${invalidEmails}</strong> inválidos</span>
         `;
-
+        
         currentListStats.textContent = `${validEmails} emails válidos`;
 
         // Show/hide empty state
@@ -522,10 +549,10 @@
     function showStatus(message, type = 'success') {
         const indicator = document.getElementById('statusIndicator');
         const messageSpan = document.getElementById('statusMessage');
-
+        
         messageSpan.textContent = message;
         indicator.style.display = 'block';
-
+        
         setTimeout(() => {
             indicator.style.display = 'none';
         }, 3000);
